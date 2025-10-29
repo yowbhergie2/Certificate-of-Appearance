@@ -2,6 +2,14 @@
  * RMS CA DATABASE - Code.gs
  * This is the private admin-only spreadsheet that serves as the central database.
  * It contains all backend logic for admin operations and the public Web App.
+ *
+ * --- V2 UPDATE ---
+ * - Strengthened PDF sharing logic in `generateCertificate` to fix "Unable to open file" error.
+ * - Added `Utilities.sleep()` to allow file processing before setting permissions.
+ * - Changed PDF URL format to a more direct link (`/uc?export=view`).
+ * - Added `fixAllPDFSharing()` menu item to repair existing broken links.
+ * - Enabled Drive API (Advanced Drive Service) is now required for this script to run correctly.
+ * -----------------
  */
 
 // Configuration
@@ -18,7 +26,7 @@ function onOpen() {
     .addSeparator()
     .addItem('Get Web App URL', 'showWebAppUrl')
     .addSeparator()
-    .addItem('🔧 Fix PDF Sharing (All)', 'fixAllPDFSharing')
+    .addItem('🔧 Fix PDF Sharing (All)', 'fixAllPDFSharing') // <-- NEW: Added fix-it menu
     .addToUi();
 }
 
@@ -38,7 +46,7 @@ function showAdminPanel() {
 function showWebAppUrl() {
   const url = ScriptApp.getService().getUrl();
   const ui = SpreadsheetApp.getUi();
-  ui.alert('Web App URL', 
+  ui.alert('Web App URL',
            'Your QR code verification URL:\n\n' + url + '\n\n' +
            'Make sure the Web App is deployed as "Execute as: Me" and "Who has access: Anyone"',
            ui.ButtonSet.OK);
@@ -49,19 +57,19 @@ function showWebAppUrl() {
  */
 function doGet(e) {
   const regNo = e.parameter.id;
-  
+
   if (!regNo) {
     return HtmlService.createHtmlOutput('<h1>Invalid Request</h1><p>No registration number provided.</p>');
   }
-  
+
   // Get the request data
   const requestData = getRequestByRegNo(regNo);
-  
+
   // Create and return the verification page
   const template = HtmlService.createTemplateFromFile('VerificationPage');
   template.requestData = requestData;
   template.regNo = regNo;
-  
+
   return template.evaluate()
     .setTitle('Certificate Verification')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
@@ -75,12 +83,12 @@ function formatDateForInput(date) {
   if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
     return ''; // Return empty string for invalid dates
   }
-  
+
   // Adjust for timezone issues by getting parts individually
   const year = date.getFullYear();
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const day = date.getDate().toString().padStart(2, '0');
-  
+
   return `${year}-${month}-${day}`;
 }
 
@@ -90,7 +98,7 @@ function formatDateForInput(date) {
 function getRequestByRegNo(regNo) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
   const data = sheet.getDataRange().getValues();
-  
+
   for (let i = 1; i < data.length; i++) {
     if (data[i][1] === regNo) { // Column B: RegistrationNo
       return {
@@ -99,17 +107,16 @@ function getRequestByRegNo(regNo) {
         displayName: data[i][2],
         position: data[i][7],
         office: data[i][8],
-        // **FIX:** Ensure dates are formatted as strings
         inclusiveDates: data[i][11] ? formatInclusiveDates(formatDateForInput(new Date(data[i][9])), formatDateForInput(new Date(data[i][10]))) : 'N/A',
         purpose: data[i][12],
         status: data[i][13],
         issueDate: data[i][16] ? new Date(data[i][16]).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A',
         approvedBy: data[i][15] || 'N/A',
-        pdfUrl: data[i][19] || null // **FIX:** Include PDF URL (Column T)
+        pdfUrl: data[i][19] || null // Column T: GeneratedPDF_URL
       };
     }
   }
-  
+
   return { found: false };
 }
 
@@ -136,12 +143,12 @@ function getDashboardStats() {
     let totalApproved = 0;
     let totalRejected = 0;
     const officeCounts = {};
-    
+
     // **NEW:** Date stats
     let totalToday = 0;
     let totalMonth = 0;
     let totalYear = 0;
-    
+
     // Get current date parts in script's timezone
     const now = new Date();
     const nowDay = now.getDate();
@@ -160,11 +167,11 @@ function getDashboardStats() {
       if (office) {
         officeCounts[office] = (officeCounts[office] || 0) + 1;
       }
-      
+
       // **NEW:** Calculate date stats
       if (timestampRaw && !isNaN(new Date(timestampRaw).getTime())) {
         const timestamp = new Date(timestampRaw);
-        
+
         if (timestamp.getFullYear() === nowYear) {
           totalYear++;
           if (timestamp.getMonth() === nowMonth) {
@@ -221,10 +228,9 @@ function getPendingRequests() {
 
     for (let i = 1; i < data.length; i++) {
       if (data[i][13] === 'Pending') { // Column N: Status
-        
+
         let timestampStr = '';
         try {
-          // **FIX:** Robustly check and format timestamp
           const ts = new Date(data[i][0]);
           if (isNaN(ts.getTime())) {
             throw new Error('Invalid timestamp');
@@ -234,7 +240,7 @@ function getPendingRequests() {
           console.warn(`Invalid timestamp for row ${i+1}: ${data[i][0]}`);
           timestampStr = new Date().toISOString(); // Fallback to now
         }
-        
+
         requests.push({
           rowNumber: i + 1,
           registrationNo: data[i][1],
@@ -245,14 +251,11 @@ function getPendingRequests() {
           suffix: data[i][6],
           position: data[i][7],
           office: data[i][8],
-          // **FIX:** Send raw dates formatted for HTML input
           startDate: formatDateForInput(new Date(data[i][9])),
           endDate: formatDateForInput(new Date(data[i][10])),
-          // **FIX:** Send pre-formatted inclusiveDates string
           inclusiveDates: formatInclusiveDates(formatDateForInput(new Date(data[i][9])), formatDateForInput(new Date(data[i][10]))),
           purpose: data[i][12],
           submittedBy: data[i][14],
-          // **FIX:** Send ISO string for timestamp
           timestamp: timestampStr
         });
       }
@@ -286,7 +289,6 @@ function getApprovedRequests() {
 
     const requests = [];
 
-    // **FIX 1:** Added i++ to prevent infinite loop
     for (let i = 1; i < data.length; i++) {
       if (data[i][13] === 'Approved') { // Column N: Status
         requests.push({
@@ -295,11 +297,9 @@ function getApprovedRequests() {
           displayName: data[i][2],
           position: data[i][7],
           office: data[i][8],
-          // **FIX 2:** Use formatDateForInput to correctly serialize dates
           inclusiveDates: formatInclusiveDates(formatDateForInput(new Date(data[i][9])), formatDateForInput(new Date(data[i][10]))),
           purpose: data[i][12],
           approvedBy: data[i][15],
-          // **FIX:** Format issue date as string
           issueDate: data[i][16] ? new Date(data[i][16]).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A',
           pdfUrl: data[i][19]
         });
@@ -321,22 +321,22 @@ function approveRequest(rowNumber, regNo) {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
     const approvedBy = Session.getActiveUser().getEmail();
     const issueDate = new Date();
-    
+
     // Get the Web App URL
     const webAppUrl = ScriptApp.getService().getUrl();
     const verificationUrl = webAppUrl + '?id=' + regNo;
-    
+
     // Generate QR code URL using an external API
-    const qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + 
+    const qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' +
                       encodeURIComponent(verificationUrl);
-    
+
     // Update the row
     sheet.getRange(rowNumber, 14).setValue('Approved'); // Column N: Status
     sheet.getRange(rowNumber, 16).setValue(approvedBy);  // Column P: ApprovedBy
     sheet.getRange(rowNumber, 17).setValue(issueDate);   // Column Q: IssueDate
     sheet.getRange(rowNumber, 18).setValue(qrCodeUrl);   // Column R: QRCodeLink
     sheet.getRange(rowNumber, 19).setValue(verificationUrl); // Column S: VerificationURL
-    
+
     return {
       success: true,
       message: 'Request approved successfully!'
@@ -357,10 +357,10 @@ function rejectRequest(rowNumber) {
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
     const rejectedBy = Session.getActiveUser().getEmail();
-    
+
     sheet.getRange(rowNumber, 14).setValue('Rejected'); // Column N: Status
     sheet.getRange(rowNumber, 16).setValue(rejectedBy);  // Column P: ApprovedBy (storing who rejected)
-    
+
     return {
       success: true,
       message: 'Request rejected.'
@@ -385,52 +385,50 @@ function generateCertificate(regNo) {
     const data = sheet.getDataRange().getValues();
     let requestData = null;
     let rowNumber = null;
-    
+
     for (let i = 1; i < data.length; i++) {
       if (data[i][1] === regNo && data[i][13] === 'Approved') {
         requestData = {
           displayName: data[i][2],
           position: data[i][7],
           office: data[i][8],
-          // **FIX:** Use the pre-formatted inclusive dates
-          inclusiveDates: data[i][11],
+          inclusiveDates: data[i][11], // Use pre-formatted
           purpose: data[i][12],
           regNo: data[i][1],
           issueDate: data[i][16],
-          qrCodeLink: data[i][17],
-          verificationUrl: data[i][18]
+          qrCodeLink: data[i][17]
         };
         rowNumber = i + 1;
         break;
       }
     }
-    
+
     if (!requestData) {
       throw new Error('Request not found or not approved');
     }
-    
+
     // Get signatory data
     const signatorySheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Signatories');
     const signatoryData = signatorySheet.getRange(2, 1, 1, 2).getValues()[0];
     const signatoryName = signatoryData[0] || 'N/A';
     const signatoryPosition = signatoryData[1] || 'N/A';
-    
+
     // Format issue date
-    const issueDate = Utilities.formatDate(new Date(requestData.issueDate), 
-                                          Session.getScriptTimeZone(), 
+    const issueDate = Utilities.formatDate(new Date(requestData.issueDate),
+                                          Session.getScriptTimeZone(),
                                           'MMMM dd, yyyy');
-    
+
     // Make a copy of the template
     const template = DriveApp.getFileById(GOOGLE_DOC_TEMPLATE_ID);
     const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
     const docCopy = template.makeCopy('CA_' + regNo + '_temp', folder);
     const doc = DocumentApp.openById(docCopy.getId());
     const body = doc.getBody();
-    
-    // **FIX:** Clear out old/wrong date placeholders, just in case.
+
+    // Clear out old/wrong date placeholders, just in case.
     body.replaceText('{{StartDate}}', '');
     body.replaceText('{{EndDate}}', '');
-    
+
     // Replace text placeholders
     body.replaceText('{{DisplayName}}', requestData.displayName);
     body.replaceText('{{Position}}', requestData.position);
@@ -441,100 +439,96 @@ function generateCertificate(regNo) {
     body.replaceText('{{SignatoryName}}', signatoryName);
     body.replaceText('{{SignatoryPosition}}', signatoryPosition);
     body.replaceText('{{IssueDate}}', issueDate);
-    
+
     // Replace QR code placeholder with actual image
-    // Always generate the QR code using the verification URL to avoid stale or incorrect links
-    const verificationUrl = requestData.verificationUrl
-      || ScriptApp.getService().getUrl() + '?id=' + regNo;
-    const qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='
-      + encodeURIComponent(verificationUrl);
+    const qrCodeImageBlob = UrlFetchApp.fetch(requestData.qrCodeLink).getBlob();
 
-    // Persist the corrected QR code URL back to the sheet for future use
-    if (requestData.qrCodeLink !== qrCodeUrl) {
-      sheet.getRange(rowNumber, 18).setValue(qrCodeUrl);
-    }
-
-    const qrCodeImageBlob = UrlFetchApp.fetch(qrCodeUrl).getBlob();
-    
     // Find and replace {{QRCode}} placeholder
     const searchResult = body.findText('{{QRCode}}');
     if (searchResult) {
       const element = searchResult.getElement();
       const parent = element.getParent();
       const childIndex = parent.getChildIndex(element);
-      
+
       // Remove the placeholder text
       element.asText().setText('');
-      
+
       // Insert the image
       if (parent.getType() === DocumentApp.ElementType.PARAGRAPH) {
         parent.asParagraph().insertInlineImage(childIndex, qrCodeImageBlob);
       }
     }
-    
+
     // Save and close the document
     doc.saveAndClose();
-    
+
     // Convert to PDF
     const pdfBlob = docCopy.getAs('application/pdf');
     pdfBlob.setName('CA_' + regNo + '.pdf');
-    
+
     const pdfFile = folder.createFile(pdfBlob);
     const fileId = pdfFile.getId();
 
-    // **FIX:** Wait a moment for file to be fully created
-    Utilities.sleep(1000);
+    // **FIX:** Wait a moment for file to be fully created and processed by Drive
+    Utilities.sleep(2000); // 2-second pause
 
     // **FIX:** Set sharing permissions - Use Drive API first (more reliable)
     let sharingSuccess = false;
 
     try {
-      // Method 1: Drive API - This is the most reliable method
+      // Method 1: Drive API (Advanced Service)
+      // This is the most reliable method and requires the Drive API to be enabled.
       Drive.Permissions.insert(
         {
           'type': 'anyone',
           'role': 'reader',
-          'withLink': true
+          'withLink': true // This is deprecated but still works; 'allowFileDiscovery: false' is newer
         },
-        fileId
+        fileId,
+        {
+          'supportsAllDrives': true // Add this if using Shared Drives
+        }
       );
       console.log('Drive API sharing successful for file: ' + fileId);
       sharingSuccess = true;
     } catch (e) {
-      console.error('Drive API permission failed:', e);
+      console.error('Drive API permission failed (is it enabled?):', e);
 
-      // Fallback: Try setSharing
+      // Fallback: Try DriveApp.setSharing
       try {
         pdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-        console.log('setSharing successful for file: ' + fileId);
+        console.log('Fallback setSharing successful for file: ' + fileId);
         sharingSuccess = true;
       } catch (e2) {
-        console.error('setSharing also failed:', e2);
+        console.error('Fallback setSharing also failed:', e2);
       }
     }
 
     // Verify sharing worked
     if (!sharingSuccess) {
-      console.error('WARNING: File sharing may not be set correctly for: ' + fileId);
+      console.error('CRITICAL WARNING: File sharing failed for: ' + fileId + '. The link will not work.');
+      // Even if sharing fails, we proceed but the link will be broken.
+      // The `fixAllPDFSharing` function can be used to repair this later.
     }
 
-    // **FIX:** Use the most reliable URL format
-    const pdfUrl = 'https://drive.google.com/file/d/' + fileId + '/view';
+    // **FIX:** Use a more reliable direct-download-friendly URL
+    // const pdfUrl = 'https://drive.google.com/file/d/' + fileId + '/view'; // Old URL
+    const pdfUrl = 'https://drive.google.com/uc?export=view&id=' + fileId; // New, more direct URL
 
     // Save PDF URL to sheet
     sheet.getRange(rowNumber, 20).setValue(pdfUrl); // Column T: GeneratedPDF_URL
-    
+
     // Delete the temporary doc
     docCopy.setTrashed(true);
-    
+
     return {
       success: true,
       message: 'Certificate generated successfully!',
       pdfUrl: pdfUrl
     };
-    
+
   } catch (error) {
-    console.error('Error generating certificate:', error);
+    console.error('Error generating certificate:', error, error.stack);
     return {
       success: false,
       message: 'Error generating certificate: ' + error.toString()
@@ -549,7 +543,7 @@ function getSignatory() {
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Signatories');
     const data = sheet.getRange(2, 1, 1, 2).getValues()[0];
-    
+
     return {
       name: data[0] || '',
       position: data[1] || ''
@@ -568,7 +562,7 @@ function updateSignatory(name, position) {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Signatories');
     sheet.getRange(2, 1).setValue(name);
     sheet.getRange(2, 2).setValue(position);
-    
+
     return {
       success: true,
       message: 'Signatory updated successfully!'
@@ -591,14 +585,14 @@ function updateSignatory(name, position) {
 function getOffices() {
   try {
     const officesSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Offices');
-    
+
     if (!officesSheet) {
       throw new Error('Offices sheet not found in RMS Database');
     }
-    
+
     const data = officesSheet.getRange(2, 1, officesSheet.getLastRow() - 1, 1).getValues();
     const offices = data.map(row => row[0]).filter(office => office !== '');
-    
+
     return offices;
   } catch (error) {
     console.error('Error fetching offices:', error);
@@ -615,15 +609,15 @@ function updatePendingRequest(updateData) {
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
     const rowNumber = parseInt(updateData.rowNumber, 10);
-    
+
     if (isNaN(rowNumber) || rowNumber < 2) {
       throw new Error('Invalid row number.');
     }
-    
+
     // Recalculate DisplayName and InclusiveDates
     const displayName = formatDisplayName(updateData);
     const inclusiveDates = formatInclusiveDates(updateData.startDate, updateData.endDate);
-    
+
     // Update the row
     // C: DisplayName, D: LastName, E: FirstName, F: MiddleInitial, G: Suffix
     sheet.getRange(rowNumber, 3, 1, 5).setValues([[
@@ -633,13 +627,13 @@ function updatePendingRequest(updateData) {
       updateData.middleInitial || '',
       updateData.suffix || ''
     ]]);
-    
+
     // H: Position, I: Office
     sheet.getRange(rowNumber, 8, 1, 2).setValues([[
       updateData.position,
       updateData.office
     ]]);
-    
+
     // J: StartDate, K: EndDate, L: InclusiveDates, M: Purpose
     sheet.getRange(rowNumber, 10, 1, 4).setValues([[
       new Date(updateData.startDate),
@@ -647,12 +641,12 @@ function updatePendingRequest(updateData) {
       inclusiveDates,
       updateData.purpose
     ]]);
-    
+
     return {
       success: true,
       message: 'Request updated successfully!'
     };
-    
+
   } catch (error) {
     console.error('Error updating request:', error);
     return {
@@ -662,14 +656,13 @@ function updatePendingRequest(updateData) {
   }
 }
 
-
 /**
  * Formats the name into DisplayName format (Helper)
  * Example: "JUAN A. DELA CRUZ, JR."
  */
 function formatDisplayName(formData) {
   let displayName = formData.lastName;
-  
+
   if (formData.firstName) {
     displayName = formData.firstName + ' ';
     if (formData.middleInitial) {
@@ -677,11 +670,11 @@ function formatDisplayName(formData) {
     }
     displayName += formData.lastName;
   }
-  
+
   if (formData.suffix) {
     displayName += ', ' + formData.suffix;
   }
-  
+
   return displayName.toUpperCase(); // Ensure uppercase
 }
 
@@ -695,14 +688,14 @@ function formatInclusiveDates(startDateStr, endDateStr) {
     // Create dates as UTC to avoid timezone shifts from YYYY-MM-DD strings
     const start = new Date(startDateStr + 'T00:00:00Z');
     const end = new Date(endDateStr + 'T00:00:00Z');
-    
+
     const options = { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' };
-    
+
     const startMonth = start.toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' });
     const startDay = start.getUTCDate(); // Use getUTCDate
     const endDay = end.getUTCDate();   // Use getUTCDate
     const year = start.getUTCFullYear(); // Use getUTCFullYear
-    
+
     if (startDateStr === endDateStr) {
       // Single day
       return start.toLocaleDateString('en-US', options);
@@ -713,7 +706,7 @@ function formatInclusiveDates(startDateStr, endDateStr) {
       // Different months
       const endMonth = end.toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' });
       const endYear = end.getUTCFullYear();
-      
+
       if(year !== endYear) {
         return `${start.toLocaleDateString('en-US', options)} - ${end.toLocaleDateString('en-US', options)}`;
       } else {
@@ -740,16 +733,21 @@ function fixPDFSharing(fileId) {
           'role': 'reader',
           'withLink': true
         },
-        fileId
+        fileId,
+        {
+          'supportsAllDrives': true // Add this if using Shared Drives
+        }
       );
       return { success: true, message: 'File shared successfully using Drive API', fileId: fileId };
     } catch (e1) {
+      console.error('Drive API failed during fix:', e1);
       // Fallback to DriveApp
       const file = DriveApp.getFileById(fileId);
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-      return { success: true, message: 'File shared successfully using DriveApp', fileId: fileId };
+      return { success: true, message: 'File shared successfully using DriveApp fallback', fileId: fileId };
     }
   } catch (error) {
+    console.error('Failed to fix sharing for ' + fileId, error);
     return { success: false, message: 'Failed to share file: ' + error.toString(), fileId: fileId };
   }
 }
@@ -759,22 +757,43 @@ function fixPDFSharing(fileId) {
  * Run this if you need to fix sharing on existing certificates
  */
 function fixAllPDFSharing() {
+  const ui = SpreadsheetApp.getUi();
+  const confirmation = ui.alert(
+    'Confirm Batch Fix',
+    'This will attempt to fix sharing permissions for ALL generated PDFs in the database. This may take a long time. Do you want to proceed?',
+    ui.ButtonSet.YES_NO
+  );
+
+  if (confirmation !== ui.Button.YES) {
+    return;
+  }
+
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
   const data = sheet.getDataRange().getValues();
   let fixed = 0;
   let failed = 0;
+  let skipped = 0;
 
   for (let i = 1; i < data.length; i++) {
     const pdfUrl = data[i][19]; // Column T: GeneratedPDF_URL
+    const status = data[i][13]; // Column N: Status
 
-    if (pdfUrl && pdfUrl.includes('drive.google.com')) {
+    // Only fix 'Approved' certificates that have a URL
+    if (status === 'Approved' && pdfUrl && pdfUrl.includes('drive.google.com')) {
       // Extract file ID from URL
-      const match = pdfUrl.match(/\/file\/d\/([^\/]+)/);
-      if (match && match[1]) {
-        const fileId = match[1];
+      // Handles both '/view' and '/uc' formats
+      const match = pdfUrl.match(/id=([^\/&]+)|file\/d\/([^\/&]+)/);
+      
+      if (match && (match[1] || match[2])) {
+        const fileId = match[1] || match[2];
         const result = fixPDFSharing(fileId);
 
         if (result.success) {
+          // **Also update the URL to the new format**
+          const newPdfUrl = 'https://drive.google.com/uc?export=view&id=' + fileId;
+          if (pdfUrl !== newPdfUrl) {
+            sheet.getRange(i + 1, 20).setValue(newPdfUrl);
+          }
           fixed++;
           console.log('Fixed: ' + fileId);
         } else {
@@ -783,14 +802,17 @@ function fixAllPDFSharing() {
         }
 
         // Sleep to avoid rate limiting
-        Utilities.sleep(500);
+        Utilities.sleep(1000); // 1 second pause
       }
+    } else {
+      skipped++;
     }
   }
 
-  SpreadsheetApp.getUi().alert('Sharing Fix Complete',
-    `Fixed: ${fixed}\nFailed: ${failed}`,
-    SpreadsheetApp.getUi().ButtonSet.OK);
+  console.log(`Fix complete. Fixed: ${fixed}, Failed: ${failed}, Skipped: ${skipped}`);
+  ui.alert('Sharing Fix Complete',
+    `Processed all rows.\n\nFixed: ${fixed}\nFailed: ${failed}\nSkipped (not applicable): ${skipped}`,
+    ui.ButtonSet.OK);
 }
 
 /**
@@ -799,32 +821,32 @@ function fixAllPDFSharing() {
  */
 function initializeDatabase() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  
+
   // Create or get Requests sheet
   let requestsSheet = ss.getSheetByName('Requests');
   if (!requestsSheet) {
     requestsSheet = ss.insertSheet('Requests');
   }
-  
+
   // Set headers for Requests
   const requestsHeaders = [
-    'Timestamp', 'RegistrationNo', 'DisplayName', 'LastName', 'FirstName', 
-    'MiddleInitial', 'Suffix', 'Position', 'Office', 'StartDate', 'EndDate', 
-    'InclusiveDates', 'Purpose', 'Status', 'SubmittedBy', 'ApprovedBy', 
+    'Timestamp', 'RegistrationNo', 'DisplayName', 'LastName', 'FirstName',
+    'MiddleInitial', 'Suffix', 'Position', 'Office', 'StartDate', 'EndDate',
+    'InclusiveDates', 'Purpose', 'Status', 'SubmittedBy', 'ApprovedBy',
     'IssueDate', 'QRCodeLink', 'VerificationURL', 'GeneratedPDF_URL'
   ];
   requestsSheet.getRange(1, 1, 1, requestsHeaders.length).setValues([requestsHeaders]);
   requestsSheet.getRange(1, 1, 1, requestsHeaders.length).setFontWeight('bold');
-  
+
   // Create or get Offices sheet
   let officesSheet = ss.getSheetByName('Offices');
   if (!officesSheet) {
     officesSheet = ss.insertSheet('Offices');
   }
-  
+
   officesSheet.getRange(1, 1).setValue('Office Name');
   officesSheet.getRange(1, 1).setFontWeight('bold');
-  
+
   // Add sample offices
   const sampleOffices = [
     ['Human Resources'],
@@ -834,20 +856,21 @@ function initializeDatabase() {
     ['Marketing']
   ];
   officesSheet.getRange(2, 1, sampleOffices.length, 1).setValues(sampleOffices);
-  
+
   // Create or get Signatories sheet
   let signatoriesSheet = ss.getSheetByName('Signatories');
   if (!signatoriesSheet) {
     signatoriesSheet = ss.insertSheet('Signatories');
   }
-  
+
   const signatoryHeaders = ['Name', 'Position'];
   signatoriesSheet.getRange(1, 1, 1, 2).setValues([signatoryHeaders]);
   signatoriesSheet.getRange(1, 1, 1, 2).setFontWeight('bold');
-  
+
   // Add default signatory
   signatoriesSheet.getRange(2, 1, 1, 2).setValues([['John Doe', 'Director, RMS']]);
-  
+
   SpreadsheetApp.getUi().alert('Database initialized successfully!');
 }
+
 

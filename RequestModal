@@ -37,6 +37,15 @@
       border-color: #f97316; /* orange-500 */
       box-shadow: 0 0 0 2px #fbbf24; /* ring-orange-300 */
     }
+
+    /* Style for uppercase inputs */
+    .uppercase-input {
+      text-transform: uppercase;
+    }
+    /* Keep placeholders in normal case */
+    .uppercase-input::placeholder {
+      text-transform: none;
+    }
     
   </style>
 </head>
@@ -45,14 +54,19 @@
   <!-- Rounded-2xl and Shadow-2xl for a 'floating' card effect -->
   <div id="formContainer" class="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-2xl mx-auto">
     
-    <!-- TITLE: Changed gradient to Blue theme and updated text -->
-    <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-700 mb-2 text-center">
-      Request for Certificate of Appearance
+    <!-- TITLE: Updated as per request -->
+    <h2 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-700 text-center">
+      Request for
     </h2>
     
-    <!-- SUBTITLE: Added as per request -->
-    <p class="text-lg font-medium text-gray-600 text-center mb-8">
-      DPWH - REGIONAL OFFICE II
+    <!-- MAIN TITLE: Styled to match -->
+    <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-700 mb-2 text-center">
+      CERTIFICATE OF APPEARANCE
+    </h1>
+    
+    <!-- SUBTITLE: Smaller and grayer -->
+    <p class="text-base font-medium text-gray-500 text-center mb-8"> <!-- text-lg -> text-base, text-gray-600 -> text-gray-500 -->
+      DPWH REGIONAL OFFICE II
     </p>
     
     <form id="requestForm" onsubmit="handleSubmit(event)">
@@ -71,25 +85,25 @@
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Last Name <span class="text-red-500">*</span></label>
             <input type="text" id="lastName" name="lastName" required 
-                   class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg uppercase-input">
           </div>
           
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">First Name <span class="text-red-500">*</span></label>
             <input type="text" id="firstName" name="firstName" required 
-                   class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg uppercase-input">
           </div>
           
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Middle Initial</label>
             <input type="text" id="middleInitial" name="middleInitial" maxlength="2"
-                   class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg uppercase-input">
           </div>
           
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Suffix</label>
             <input type="text" id="suffix" name="suffix" placeholder="Jr., Sr., III, etc."
-                   class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg uppercase-input">
           </div>
         </div>
       </div>
@@ -107,7 +121,7 @@
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Position <span class="text-red-500">*</span></label>
             <input type="text" id="position" name="position" required 
-                   class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg uppercase-input">
           </div>
           
           <div>
@@ -121,7 +135,7 @@
           <div id="customOfficeContainer" class="hidden">
             <label class="block text-sm font-medium text-gray-700 mb-1">Specify Office <span class="text-red-500">*</span></label>
             <input type="text" id="customOffice" name="customOffice"
-                   class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg uppercase-input">
           </div>
         </div>
       </div>
@@ -151,25 +165,21 @@
         <p id="dateError" class="text-red-500 text-sm mt-2 hidden"></p>
       </div>
       
-      <!-- Purpose Section -->
+      <!-- Purpose Section (Additional Details removed) -->
       <div class="mb-6 bg-blue-50 p-4 rounded-xl border border-blue-200">
         <label class="block text-sm font-medium text-gray-700 mb-1">Purpose <span class="text-red-500">*</span></label>
         <input type="text" id="purpose" name="purpose" list="purposeSuggestions" required
-               class="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2">
+               class="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2 uppercase-input">
         <datalist id="purposeSuggestions"></datalist>
-        <textarea id="purposeDetail" name="purposeDetail" rows="3" placeholder="Additional details (optional)"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg"></textarea>
       </div>
       
-      <!-- Terms & Conditions -->
+      <!-- Terms & Conditions (Text updated) -->
       <div class="mb-6 bg-blue-50 p-4 rounded-xl border border-blue-200">
         <div class="flex items-start">
           <input type="checkbox" id="terms" name="terms" required
                  class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
           <label for="terms" class="ml-3 text-sm text-gray-700" style="text-align: justify;">
-            I understand that in case of <strong>loss of this Certificate</strong> and in order to secure a <strong>second copy</strong>, 
-            please submit a <strong>written request supported by a duly notarized Affidavit of Loss</strong> to this Office 
-            <strong>within five (5) calendar days after date of loss</strong>.
+            I understand that, in the <strong class="font-bold text-orange-600">event of loss</strong> of the Certificate to be issued, and in order to secure a second copy, a <strong class="font-bold text-orange-600">written request</strong> accompanied by a <strong class="font-bold text-orange-600">duly notarized Affidavit of Loss</strong> shall be submitted to this Office <strong class="font-bold text-orange-600">within five (5) calendar days from the date of loss</strong>.
           </label>
         </div>
       </div>
@@ -213,6 +223,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
         </svg>
         <h3 class="text-xl font-bold text-gray-800 mb-2">Request Submitted!</h3>
+        <!-- Message will be inserted here with innerHTML -->
         <p id="successMessage" class="text-gray-600 mb-6"></p>
         <button onclick="closeSuccessModal()" 
                 class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
@@ -317,26 +328,23 @@
       // Hide any previous error
       document.getElementById('errorMessage').classList.add('hidden');
       
-      // Get form data
+      // Get form data (with .toUpperCase() for relevant fields)
       const formData = {
-        lastName: document.getElementById('lastName').value.trim(),
-        firstName: document.getElementById('firstName').value.trim(),
-        middleInitial: document.getElementById('middleInitial').value.trim(),
-        suffix: document.getElementById('suffix').value.trim(),
-        position: document.getElementById('position').value.trim(),
+        lastName: document.getElementById('lastName').value.trim().toUpperCase(),
+        firstName: document.getElementById('firstName').value.trim().toUpperCase(),
+        middleInitial: document.getElementById('middleInitial').value.trim().toUpperCase(),
+        suffix: document.getElementById('suffix').value.trim().toUpperCase(),
+        position: document.getElementById('position').value.trim().toUpperCase(),
         office: document.getElementById('office').value === 'Other' 
-                ? document.getElementById('customOffice').value.trim() 
+                ? document.getElementById('customOffice').value.trim().toUpperCase() 
                 : document.getElementById('office').value,
         startDate: document.getElementById('startDate').value,
         endDate: document.getElementById('endDate').value,
-        purpose: document.getElementById('purpose').value.trim() + 
-                 (document.getElementById('purposeDetail').value.trim() 
-                 ? '. ' + document.getElementById('purposeDetail').value.trim() 
-                 : '')
+        purpose: document.getElementById('purpose').value.trim().toUpperCase()
       };
       
-      // Save purpose to localStorage
-      savePurposeToLocalStorage(document.getElementById('purpose').value.trim());
+      // Save purpose to localStorage (in uppercase)
+      savePurposeToLocalStorage(document.getElementById('purpose').value.trim().toUpperCase());
       
       // Show loading overlay
       document.getElementById('loadingOverlay').classList.remove('hidden');
@@ -354,7 +362,8 @@
       
       if (response.success) {
         // Show success modal
-        document.getElementById('successMessage').textContent = response.message;
+        // Use innerHTML to render the bold tag and line break
+        document.getElementById('successMessage').innerHTML = response.message; 
         document.getElementById('successModal').classList.remove('hidden');
         
         // Reset form
@@ -377,7 +386,7 @@
       
       // Show error message
       document.getElementById('errorText').textContent = 'An unexpected error occurred. Please try again.';
-      document.getElementById('errorMessage').classList.remove('hidden');
+      document.getElementById('errorMessage').classList.add('hidden');
       window.scrollTo(0, 0);
       
       console.error('Error:', error);

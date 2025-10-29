@@ -98,7 +98,30 @@ function getRequestByRegNo(regNo) {
 function getDashboardStats() {
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
+
+    // Check if sheet exists
+    if (!sheet) {
+      console.error('Requests sheet not found');
+      return {
+        totalPending: 0,
+        totalApproved: 0,
+        totalRejected: 0,
+        topOffices: []
+      };
+    }
+
     const data = sheet.getDataRange().getValues();
+
+    // Check if data exists and has more than just headers
+    if (!data || data.length <= 1) {
+      console.log('No data in Requests sheet');
+      return {
+        totalPending: 0,
+        totalApproved: 0,
+        totalRejected: 0,
+        topOffices: []
+      };
+    }
 
     let totalPending = 0;
     let totalApproved = 0;
@@ -147,7 +170,21 @@ function getDashboardStats() {
 function getPendingRequests() {
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
+
+    // Check if sheet exists
+    if (!sheet) {
+      console.error('Requests sheet not found');
+      return [];
+    }
+
     const data = sheet.getDataRange().getValues();
+
+    // Check if data exists and has more than just headers
+    if (!data || data.length <= 1) {
+      console.log('No data in Requests sheet');
+      return [];
+    }
+
     const requests = [];
 
     for (let i = 1; i < data.length; i++) {
@@ -179,7 +216,21 @@ function getPendingRequests() {
 function getApprovedRequests() {
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
+
+    // Check if sheet exists
+    if (!sheet) {
+      console.error('Requests sheet not found');
+      return [];
+    }
+
     const data = sheet.getDataRange().getValues();
+
+    // Check if data exists and has more than just headers
+    if (!data || data.length <= 1) {
+      console.log('No data in Requests sheet');
+      return [];
+    }
+
     const requests = [];
 
     for (let i = 1; i < data.length; i++) {

@@ -59,6 +59,11 @@
       text-transform: none;
     }
 
+    /* Capitalize input - will be handled by JavaScript for smart capitalization */
+    .capitalize-input {
+      /* No CSS transform, handled by JS to preserve Roman numerals */
+    }
+
     /* **NEW:** Class for the sticky subheader (search) */
     .sticky-subheader {
       position: sticky;
@@ -88,7 +93,11 @@
                 class="px-6 py-3 font-medium text-gray-600 hover:bg-gray-50 transition">
           Approved & Print
         </button>
-        <button onclick="switchTab('settings')" id="tab-settings" 
+        <button onclick="switchTab('history')" id="tab-history"
+                class="px-6 py-3 font-medium text-gray-600 hover:bg-gray-50 transition">
+          Request History
+        </button>
+        <button onclick="switchTab('settings')" id="tab-settings"
                 class="px-6 py-3 font-medium text-gray-600 hover:bg-gray-50 transition">
           Settings
         </button>
@@ -242,6 +251,24 @@
         </div>
       </div>
       
+      <!-- Request History Tab -->
+      <div id="content-history" class="tab-content hidden">
+        <!-- Sticky Subheader for Search -->
+        <div class="sticky-subheader flex justify-between items-center p-6 border-b">
+          <h2 class="text-2xl font-bold text-gray-800">Request History</h2>
+          <div class="relative w-full md:w-1/3">
+            <input type="text" id="historySearchInput" onkeyup="filterHistoryRequests()" placeholder="Search by name, status, office..."
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <svg class="w-5 h-5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
+        </div>
+        <div id="historyRequests" class="space-y-4 p-6">
+          <!-- Will be populated dynamically -->
+        </div>
+      </div>
+
       <!-- Settings Tab -->
       <!-- **FIX:** Added back p-6 for padding -->
       <div id="content-settings" class="tab-content hidden p-6">
@@ -255,13 +282,14 @@
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Signatory Name</label>
                 <input type="text" id="signatoryName" required
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md uppercase-input">
               </div>
-              
+
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Position/Title</label>
-                <input type="text" id="signatoryPosition" required
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                <textarea id="signatoryPosition" required rows="3"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md resize-vertical"></textarea>
+                <p class="text-xs text-gray-500 mt-1">You can enter multiple lines if needed</p>
               </div>
               
               <div id="settingsMessage" class="hidden"></div>
@@ -401,8 +429,9 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Position <span class="text-red-500">*</span></label>
-              <input type="text" id="editPosition" name="position" required 
-                     class="w-full px-3 py-2 border border-gray-300 rounded-lg uppercase-input">
+              <input type="text" id="editPosition" name="position" required
+                     class="w-full px-3 py-2 border border-gray-300 rounded-lg capitalize-input"
+                     oninput="smartCapitalize(this)">
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Office <span class="text-red-500">*</span></label>
@@ -439,7 +468,7 @@
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Purpose <span class="text-red-500">*</span></label>
             <input type="text" id="editPurpose" name="purpose" required
-                   class="w-full px-3 py-2 border border-gray-300 rounded-lg uppercase-input">
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg">
           </div>
         </div>
         
@@ -463,13 +492,60 @@
   <script>
     let currentTab = 'dashboard';
     let allOfficeOptions = []; // To store office list for the edit modal
-    
+
+    // Cache for data to speed up tab switching
+    let dataCache = {
+      pendingRequests: null,
+      approvedRequests: null,
+      historyRequests: null,
+      lastUpdate: {
+        pending: null,
+        approved: null,
+        history: null
+      }
+    };
+
     // Initialize on load
     window.onload = function() {
       loadDashboard();
       loadSignatory();
       loadOfficeList(); // Load offices for the edit modal
     };
+
+    /**
+     * Smart capitalize function that capitalizes each word but preserves Roman numerals
+     * Example: "administrative officer ii" becomes "Administrative Officer II"
+     */
+    function smartCapitalize(input) {
+      const cursorPos = input.selectionStart;
+      const romanNumerals = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+
+      let value = input.value;
+
+      // Split into words
+      let words = value.split(' ');
+
+      // Capitalize each word
+      words = words.map(word => {
+        const upperWord = word.toUpperCase();
+
+        // Check if it's a Roman numeral
+        if (romanNumerals.includes(upperWord)) {
+          return upperWord;
+        }
+
+        // Otherwise capitalize first letter only
+        if (word.length > 0) {
+          return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+        }
+        return word;
+      });
+
+      input.value = words.join(' ');
+
+      // Restore cursor position
+      input.setSelectionRange(cursorPos, cursorPos);
+    }
 
     // **NEW:** Helper to format timestamp
     function formatRequestTimestamp(isoString) {
@@ -563,28 +639,30 @@
       document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.add('hidden');
       });
-      
+
       // Remove active class from all tabs
       document.querySelectorAll('[id^="tab-"]').forEach(tab => {
         tab.classList.remove('tab-active');
         tab.classList.add('text-gray-600', 'hover:bg-gray-50');
       });
-      
+
       // Show selected content
       document.getElementById('content-' + tabName).classList.remove('hidden');
-      
+
       // Add active class to selected tab
       const activeTab = document.getElementById('tab-' + tabName);
       activeTab.classList.add('tab-active');
       activeTab.classList.remove('text-gray-600', 'hover:bg-gray-50');
-      
+
       currentTab = tabName;
-      
-      // Load data for the tab
+
+      // Load data for the tab with caching
       if (tabName === 'pending') {
-        loadPendingRequests();
+        loadPendingRequests(false); // false = use cache if available
       } else if (tabName === 'approved') {
-        loadApprovedRequests();
+        loadApprovedRequests(false);
+      } else if (tabName === 'history') {
+        loadHistoryRequests(false);
       }
     }
     
@@ -633,28 +711,26 @@
         .getDashboardStats();
     }
     
-    function loadPendingRequests() {
+    function loadPendingRequests(forceReload = true) {
+      // Check cache first if not forcing reload
+      if (!forceReload && dataCache.pendingRequests && dataCache.lastUpdate.pending) {
+        const cacheAge = Date.now() - dataCache.lastUpdate.pending;
+        // Use cache if less than 30 seconds old
+        if (cacheAge < 30000) {
+          renderPendingRequests(dataCache.pendingRequests);
+          return;
+        }
+      }
+
       showLoading('Loading pending requests...');
       google.script.run
         .withSuccessHandler(function(requests) {
           try {
-            console.log('Server response for getPendingRequests:', requests); // DEBUG
-            
-            const container = document.getElementById('pendingRequests');
-            container.innerHTML = ''; // Clear existing
-            
-            // Clear search
-            const searchInput = document.getElementById('searchInput');
-            if (searchInput) searchInput.value = '';
-            
-            if (!requests || requests.length === 0) {
-              container.innerHTML = '<p id="noPendingRequests" class="text-gray-500 text-center py-8">No pending requests</p>';
-            } else {
-              requests.forEach(req => {
-                const card = createRequestCard(req, 'pending');
-                container.appendChild(card);
-              });
-            }
+            // Update cache
+            dataCache.pendingRequests = requests;
+            dataCache.lastUpdate.pending = Date.now();
+
+            renderPendingRequests(requests);
           } catch (e) {
             console.error('Error rendering pending requests:', e);
             showErrorModal('A client-side error occurred while displaying requests: ' + e.message);
@@ -665,27 +741,47 @@
         .withFailureHandler(handleAdminError)
         .getPendingRequests();
     }
+
+    function renderPendingRequests(requests) {
+      console.log('Server response for getPendingRequests:', requests); // DEBUG
+
+      const container = document.getElementById('pendingRequests');
+      container.innerHTML = ''; // Clear existing
+
+      // Clear search
+      const searchInput = document.getElementById('searchInput');
+      if (searchInput) searchInput.value = '';
+
+      if (!requests || requests.length === 0) {
+        container.innerHTML = '<p id="noPendingRequests" class="text-gray-500 text-center py-8">No pending requests</p>';
+      } else {
+        requests.forEach(req => {
+          const card = createRequestCard(req, 'pending');
+          container.appendChild(card);
+        });
+      }
+    }
     
-    function loadApprovedRequests() {
+    function loadApprovedRequests(forceReload = true) {
+      // Check cache first if not forcing reload
+      if (!forceReload && dataCache.approvedRequests && dataCache.lastUpdate.approved) {
+        const cacheAge = Date.now() - dataCache.lastUpdate.approved;
+        // Use cache if less than 30 seconds old
+        if (cacheAge < 30000) {
+          renderApprovedRequests(dataCache.approvedRequests);
+          return;
+        }
+      }
+
       showLoading('Loading approved requests...');
       google.script.run
         .withSuccessHandler(function(requests) {
           try {
-            const container = document.getElementById('approvedRequests');
-            container.innerHTML = ''; // Clear existing
-            
-            // Clear search
-            const searchInput = document.getElementById('approvedSearchInput');
-            if (searchInput) searchInput.value = '';
-            
-            if (!requests || requests.length === 0) {
-              container.innerHTML = '<p id="noApprovedRequests" class="text-gray-500 text-center py-8">No approved requests</p>';
-            } else {
-              requests.forEach(req => {
-                const card = createRequestCard(req, 'approved');
-                container.appendChild(card);
-              });
-            }
+            // Update cache
+            dataCache.approvedRequests = requests;
+            dataCache.lastUpdate.approved = Date.now();
+
+            renderApprovedRequests(requests);
           } catch (e) {
             console.error('Error rendering approved requests:', e);
             showErrorModal('A client-side error occurred while displaying requests: ' + e.message);
@@ -695,6 +791,110 @@
         })
         .withFailureHandler(handleAdminError)
         .getApprovedRequests();
+    }
+
+    function renderApprovedRequests(requests) {
+      const container = document.getElementById('approvedRequests');
+      container.innerHTML = ''; // Clear existing
+
+      // Clear search
+      const searchInput = document.getElementById('approvedSearchInput');
+      if (searchInput) searchInput.value = '';
+
+      if (!requests || requests.length === 0) {
+        container.innerHTML = '<p id="noApprovedRequests" class="text-gray-500 text-center py-8">No approved requests</p>';
+      } else {
+        requests.forEach(req => {
+          const card = createRequestCard(req, 'approved');
+          container.appendChild(card);
+        });
+      }
+    }
+
+    function loadHistoryRequests(forceReload = true) {
+      // Check cache first if not forcing reload
+      if (!forceReload && dataCache.historyRequests && dataCache.lastUpdate.history) {
+        const cacheAge = Date.now() - dataCache.lastUpdate.history;
+        // Use cache if less than 30 seconds old
+        if (cacheAge < 30000) {
+          renderHistoryRequests(dataCache.historyRequests);
+          return;
+        }
+      }
+
+      showLoading('Loading request history...');
+      google.script.run
+        .withSuccessHandler(function(requests) {
+          try {
+            // Update cache
+            dataCache.historyRequests = requests;
+            dataCache.lastUpdate.history = Date.now();
+
+            renderHistoryRequests(requests);
+          } catch (e) {
+            console.error('Error rendering history requests:', e);
+            showErrorModal('A client-side error occurred while displaying history: ' + e.message);
+          } finally {
+            hideLoading();
+          }
+        })
+        .withFailureHandler(handleAdminError)
+        .getAllRequests();
+    }
+
+    function renderHistoryRequests(requests) {
+      const container = document.getElementById('historyRequests');
+      container.innerHTML = ''; // Clear existing
+
+      // Clear search
+      const searchInput = document.getElementById('historySearchInput');
+      if (searchInput) searchInput.value = '';
+
+      if (!requests || requests.length === 0) {
+        container.innerHTML = '<p id="noHistoryRequests" class="text-gray-500 text-center py-8">No requests found</p>';
+      } else {
+        requests.forEach(req => {
+          const card = createHistoryCard(req);
+          container.appendChild(card);
+        });
+      }
+    }
+
+    function createHistoryCard(req) {
+      const card = document.createElement('div');
+      card.className = 'bg-white border border-gray-200 rounded-lg p-4 shadow-sm request-card';
+
+      // Status badge
+      let statusBadge = '';
+      if (req.status === 'Approved') {
+        statusBadge = '<span class="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">Approved</span>';
+      } else if (req.status === 'Rejected') {
+        statusBadge = '<span class="px-3 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full">Rejected</span>';
+      } else {
+        statusBadge = '<span class="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">Pending</span>';
+      }
+
+      card.innerHTML = `
+        <div class="flex flex-col">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center">
+              <span class="font-bold text-blue-700 text-lg">${req.displayName}</span>
+              <span class="ml-3 px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">${req.registrationNo}</span>
+            </div>
+            ${statusBadge}
+          </div>
+          <p class="text-gray-600 text-sm"><strong>Position:</strong> ${req.position}</p>
+          <p class="text-gray-600 text-sm"><strong>Office:</strong> ${req.office}</p>
+          <p class="text-gray-600 text-sm"><strong>Dates:</strong> ${req.inclusiveDates}</p>
+          <p class="text-gray-600 text-sm"><strong>Purpose:</strong> ${req.purpose}</p>
+          <p class="text-sm text-gray-500 mt-2"><strong>Requested:</strong> ${formatRequestTimestamp(req.timestamp)}</p>
+          ${req.status === 'Approved' ? `<p class="text-sm text-green-600"><strong>Approved By:</strong> ${req.approvedBy || 'N/A'}</p>` : ''}
+          ${req.status === 'Approved' && req.issueDate ? `<p class="text-sm text-green-600"><strong>Issue Date:</strong> ${req.issueDate}</p>` : ''}
+          ${req.status === 'Rejected' ? `<p class="text-sm text-red-600"><strong>Rejected By:</strong> ${req.approvedBy || 'N/A'}</p>` : ''}
+        </div>
+      `;
+
+      return card;
     }
     
     // --- Card Creation ---
@@ -787,9 +987,14 @@
             .withSuccessHandler(function(response) {
               hideLoading();
               if (response.success) {
+                // Clear cache to force reload
+                dataCache.pendingRequests = null;
+                dataCache.approvedRequests = null;
+                dataCache.historyRequests = null;
+
                 showSuccessModal(response.message);
                 loadDashboard();
-                loadPendingRequests();
+                loadPendingRequests(true);
               } else {
                 showErrorModal(response.message);
               }
@@ -811,9 +1016,13 @@
             .withSuccessHandler(function(response) {
               hideLoading();
               if (response.success) {
+                // Clear cache to force reload
+                dataCache.pendingRequests = null;
+                dataCache.historyRequests = null;
+
                 showSuccessModal(response.message);
                 loadDashboard();
-                loadPendingRequests();
+                loadPendingRequests(true);
               } else {
                 showErrorModal(response.message);
               }
@@ -830,11 +1039,14 @@
         .withSuccessHandler(function(response) {
           hideLoading();
           if (response.success) {
+            // Clear cache to force reload
+            dataCache.approvedRequests = null;
+
             showSuccessModal(response.message);
             if (response.pdfUrl) {
               window.open(response.pdfUrl, '_blank');
             }
-            loadApprovedRequests();
+            loadApprovedRequests(true);
           } else {
             showErrorModal(response.message);
           }
@@ -970,37 +1182,41 @@
     
     function handleUpdateRequest(event) {
       event.preventDefault();
-      
+
       // Final validation check
       if (!validateEditDates()) return;
-      
+
       const form = event.target;
-      const officeValue = form.office.value === 'Other' 
-        ? form.customOffice.value.trim().toUpperCase() 
+      const officeValue = form.office.value === 'Other'
+        ? form.customOffice.value.trim().toUpperCase()
         : form.office.value;
-      
+
       const updateData = {
         rowNumber: form.rowNumber.value,
         lastName: form.lastName.value.trim().toUpperCase(),
         firstName: form.firstName.value.trim().toUpperCase(),
         middleInitial: form.middleInitial.value.trim().toUpperCase(),
         suffix: form.suffix.value.trim().toUpperCase(),
-        position: form.position.value.trim().toUpperCase(),
+        position: form.position.value.trim(), // Keep as-is, already smart capitalized
         office: officeValue,
         startDate: form.startDate.value,
         endDate: form.endDate.value,
-        purpose: form.purpose.value.trim().toUpperCase()
+        purpose: form.purpose.value.trim() // Don't force uppercase
       };
-      
+
       showLoading('Updating request...');
       closeModal('editModal');
-      
+
       google.script.run
         .withSuccessHandler(function(response) {
           hideLoading();
           if (response.success) {
+            // Clear cache to force reload
+            dataCache.pendingRequests = null;
+            dataCache.historyRequests = null;
+
             showSuccessModal(response.message);
-            loadPendingRequests(); // Refresh the list
+            loadPendingRequests(true); // Refresh the list
           } else {
             showErrorModal(response.message);
           }
@@ -1099,13 +1315,13 @@
           card.style.display = 'none';
         }
       });
-      
+
       // Handle 'no results' message
       let noResultsMsg = requestsContainer.querySelector('#noApprovedSearchResults');
       if (noResultsMsg) {
         noResultsMsg.remove();
       }
-      
+
       const noApprovedMsg = requestsContainer.querySelector('#noApprovedRequests');
 
       if (!foundRequest && cards.length > 0) {
@@ -1117,6 +1333,42 @@
         if(noApprovedMsg) noApprovedMsg.style.display = 'none'; // Hide original 'no approved'
       } else if (noApprovedMsg) {
          noApprovedMsg.style.display = (cards.length === 0) ? 'block' : 'none';
+      }
+    }
+
+    function filterHistoryRequests() {
+      const searchTerm = document.getElementById('historySearchInput').value.toUpperCase();
+      const requestsContainer = document.getElementById('historyRequests');
+      const cards = requestsContainer.querySelectorAll('.request-card');
+      let foundRequest = false;
+
+      cards.forEach(card => {
+        const cardText = card.textContent || card.innerText;
+        if (cardText.toUpperCase().indexOf(searchTerm) > -1) {
+          card.style.display = '';
+          foundRequest = true;
+        } else {
+          card.style.display = 'none';
+        }
+      });
+
+      // Handle 'no results' message
+      let noResultsMsg = requestsContainer.querySelector('#noHistorySearchResults');
+      if (noResultsMsg) {
+        noResultsMsg.remove();
+      }
+
+      const noHistoryMsg = requestsContainer.querySelector('#noHistoryRequests');
+
+      if (!foundRequest && cards.length > 0) {
+        noResultsMsg = document.createElement('p');
+        noResultsMsg.id = 'noHistorySearchResults';
+        noResultsMsg.className = 'text-gray-500 text-center py-8';
+        noResultsMsg.textContent = 'No requests found matching your search.';
+        requestsContainer.appendChild(noResultsMsg);
+        if(noHistoryMsg) noHistoryMsg.style.display = 'none'; // Hide original 'no history'
+      } else if (noHistoryMsg) {
+         noHistoryMsg.style.display = (cards.length === 0) ? 'block' : 'none';
       }
     }
 

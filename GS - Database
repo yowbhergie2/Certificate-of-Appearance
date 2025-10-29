@@ -342,6 +342,62 @@ function getApprovedRequests() {
 }
 
 /**
+ * Gets all requests (for history tab)
+ */
+function getAllRequests() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
+
+    if (!sheet) {
+      console.error('Requests sheet not found');
+      return [];
+    }
+
+    const data = sheet.getDataRange().getValues();
+
+    if (!data || data.length <= 1) {
+      console.log('No data in Requests sheet');
+      return [];
+    }
+
+    const requests = [];
+
+    for (let i = 1; i < data.length; i++) {
+      let timestampStr = '';
+      try {
+        const ts = new Date(data[i][0]);
+        if (isNaN(ts.getTime())) {
+          throw new Error('Invalid timestamp');
+        }
+        timestampStr = ts.toISOString();
+      } catch (e) {
+        console.warn(`Invalid timestamp for row ${i+1}: ${data[i][0]}`);
+        timestampStr = new Date().toISOString(); // Fallback to now
+      }
+
+      requests.push({
+        rowNumber: i + 1,
+        registrationNo: data[i][1],
+        displayName: data[i][2],
+        position: data[i][7],
+        office: data[i][8],
+        inclusiveDates: formatInclusiveDates(formatDateForInput(new Date(data[i][9])), formatDateForInput(new Date(data[i][10]))),
+        purpose: data[i][12],
+        status: data[i][13],
+        approvedBy: data[i][15] || 'N/A',
+        issueDate: data[i][16] ? new Date(data[i][16]).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A',
+        timestamp: timestampStr
+      });
+    }
+
+    return requests.reverse(); // Show newest first
+  } catch (error) {
+    console.error('Error fetching all requests:', error);
+    return [];
+  }
+}
+
+/**
  * Approves a request
  */
 function approveRequest(rowNumber, regNo) {

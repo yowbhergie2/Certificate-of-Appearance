@@ -397,7 +397,8 @@ function generateCertificate(regNo) {
           purpose: data[i][12],
           regNo: data[i][1],
           issueDate: data[i][16],
-          qrCodeLink: data[i][17]
+          qrCodeLink: data[i][17],
+          verificationUrl: data[i][18]
         };
         rowNumber = i + 1;
         break;
@@ -442,7 +443,18 @@ function generateCertificate(regNo) {
     body.replaceText('{{IssueDate}}', issueDate);
     
     // Replace QR code placeholder with actual image
-    const qrCodeImageBlob = UrlFetchApp.fetch(requestData.qrCodeLink).getBlob();
+    // Always generate the QR code using the verification URL to avoid stale or incorrect links
+    const verificationUrl = requestData.verificationUrl
+      || ScriptApp.getService().getUrl() + '?id=' + regNo;
+    const qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='
+      + encodeURIComponent(verificationUrl);
+
+    // Persist the corrected QR code URL back to the sheet for future use
+    if (requestData.qrCodeLink !== qrCodeUrl) {
+      sheet.getRange(rowNumber, 18).setValue(qrCodeUrl);
+    }
+
+    const qrCodeImageBlob = UrlFetchApp.fetch(qrCodeUrl).getBlob();
     
     // Find and replace {{QRCode}} placeholder
     const searchResult = body.findText('{{QRCode}}');

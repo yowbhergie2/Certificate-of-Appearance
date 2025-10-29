@@ -195,12 +195,16 @@ function isDuplicate(sheet, displayName, position, office, inclusiveDates) {
   // Skip header row
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
+    
+    // FIX: Use .toString().trim() to remove whitespace
+    const status = row[13] ? row[13].toString().trim() : ''; // Column N
+    
     // Check columns: DisplayName (C=2), Position (H=7), Office (I=8), InclusiveDates (L=11), Status (N=13)
     if (row[2] === displayName && 
         row[7] === position && 
         row[8] === office && 
         row[11] === inclusiveDates &&
-        row[13] === 'Pending') {
+        status === 'Pending') { // Use the trimmed status
       return true;
     }
   }
@@ -319,4 +323,3 @@ function sendAdminNotification(displayName, office, registrationNo, inclusiveDat
     // Don't throw error - notification failure shouldn't stop the request
   }
 }
-

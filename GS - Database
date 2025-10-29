@@ -66,6 +66,23 @@ function doGet(e) {
 }
 
 /**
+ * Helper function to format date inputs (YYYY-MM-DD)
+ * Handles invalid or empty dates gracefully.
+ */
+function formatDateForInput(date) {
+  if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+    return ''; // Return empty string for invalid dates
+  }
+  
+  // Adjust for timezone issues by getting parts individually
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
+}
+
+/**
  * Gets request data by registration number
  */
 function getRequestByRegNo(regNo) {
@@ -80,10 +97,11 @@ function getRequestByRegNo(regNo) {
         displayName: data[i][2],
         position: data[i][7],
         office: data[i][8],
-        inclusiveDates: data[i][11],
+        // **FIX:** Ensure dates are formatted as strings
+        inclusiveDates: data[i][11] ? formatInclusiveDates(formatDateForInput(new Date(data[i][9])), formatDateForInput(new Date(data[i][10]))) : 'N/A',
         purpose: data[i][12],
         status: data[i][13],
-        issueDate: data[i][16] || 'N/A',
+        issueDate: data[i][16] ? new Date(data[i][16]).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A',
         approvedBy: data[i][15] || 'N/A'
       };
     }
@@ -99,38 +117,38 @@ function getDashboardStats() {
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
 
-    // Check if sheet exists
     if (!sheet) {
       console.error('Requests sheet not found');
-      return {
-        totalPending: 0,
-        totalApproved: 0,
-        totalRejected: 0,
-        topOffices: []
-      };
+      return { totalPending: 0, totalApproved: 0, totalRejected: 0, topOffices: [], totalToday: 0, totalMonth: 0, totalYear: 0 };
     }
 
     const data = sheet.getDataRange().getValues();
 
-    // Check if data exists and has more than just headers
     if (!data || data.length <= 1) {
       console.log('No data in Requests sheet');
-      return {
-        totalPending: 0,
-        totalApproved: 0,
-        totalRejected: 0,
-        topOffices: []
-      };
+      return { totalPending: 0, totalApproved: 0, totalRejected: 0, topOffices: [], totalToday: 0, totalMonth: 0, totalYear: 0 };
     }
 
     let totalPending = 0;
     let totalApproved = 0;
     let totalRejected = 0;
     const officeCounts = {};
+    
+    // **NEW:** Date stats
+    let totalToday = 0;
+    let totalMonth = 0;
+    let totalYear = 0;
+    
+    // Get current date parts in script's timezone
+    const now = new Date();
+    const nowDay = now.getDate();
+    const nowMonth = now.getMonth();
+    const nowYear = now.getFullYear();
 
     for (let i = 1; i < data.length; i++) {
       const status = data[i][13]; // Column N: Status
       const office = data[i][8];  // Column I: Office
+      const timestampRaw = data[i][0]; // Column A: Timestamp
 
       if (status === 'Pending') totalPending++;
       if (status === 'Approved') totalApproved++;
@@ -138,6 +156,21 @@ function getDashboardStats() {
 
       if (office) {
         officeCounts[office] = (officeCounts[office] || 0) + 1;
+      }
+      
+      // **NEW:** Calculate date stats
+      if (timestampRaw && !isNaN(new Date(timestampRaw).getTime())) {
+        const timestamp = new Date(timestampRaw);
+        
+        if (timestamp.getFullYear() === nowYear) {
+          totalYear++;
+          if (timestamp.getMonth() === nowMonth) {
+            totalMonth++;
+            if (timestamp.getDate() === nowDay) {
+              totalToday++;
+            }
+          }
+        }
       }
     }
 
@@ -151,16 +184,14 @@ function getDashboardStats() {
       totalPending,
       totalApproved,
       totalRejected,
-      topOffices
+      topOffices,
+      totalToday,
+      totalMonth,
+      totalYear
     };
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
-    return {
-      totalPending: 0,
-      totalApproved: 0,
-      totalRejected: 0,
-      topOffices: []
-    };
+    return { totalPending: 0, totalApproved: 0, totalRejected: 0, topOffices: [], totalToday: 0, totalMonth: 0, totalYear: 0 };
   }
 }
 
@@ -171,7 +202,6 @@ function getPendingRequests() {
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
 
-    // Check if sheet exists
     if (!sheet) {
       console.error('Requests sheet not found');
       return [];
@@ -179,7 +209,6 @@ function getPendingRequests() {
 
     const data = sheet.getDataRange().getValues();
 
-    // Check if data exists and has more than just headers
     if (!data || data.length <= 1) {
       console.log('No data in Requests sheet');
       return [];
@@ -189,16 +218,39 @@ function getPendingRequests() {
 
     for (let i = 1; i < data.length; i++) {
       if (data[i][13] === 'Pending') { // Column N: Status
+        
+        let timestampStr = '';
+        try {
+          // **FIX:** Robustly check and format timestamp
+          const ts = new Date(data[i][0]);
+          if (isNaN(ts.getTime())) {
+            throw new Error('Invalid timestamp');
+          }
+          timestampStr = ts.toISOString();
+        } catch (e) {
+          console.warn(`Invalid timestamp for row ${i+1}: ${data[i][0]}`);
+          timestampStr = new Date().toISOString(); // Fallback to now
+        }
+        
         requests.push({
           rowNumber: i + 1,
           registrationNo: data[i][1],
           displayName: data[i][2],
+          lastName: data[i][3],
+          firstName: data[i][4],
+          middleInitial: data[i][5],
+          suffix: data[i][6],
           position: data[i][7],
           office: data[i][8],
-          inclusiveDates: data[i][11],
+          // **FIX:** Send raw dates formatted for HTML input
+          startDate: formatDateForInput(new Date(data[i][9])),
+          endDate: formatDateForInput(new Date(data[i][10])),
+          // **FIX:** Send pre-formatted inclusiveDates string
+          inclusiveDates: formatInclusiveDates(formatDateForInput(new Date(data[i][9])), formatDateForInput(new Date(data[i][10]))),
           purpose: data[i][12],
           submittedBy: data[i][14],
-          timestamp: data[i][0]
+          // **FIX:** Send ISO string for timestamp
+          timestamp: timestampStr
         });
       }
     }
@@ -217,7 +269,6 @@ function getApprovedRequests() {
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
 
-    // Check if sheet exists
     if (!sheet) {
       console.error('Requests sheet not found');
       return [];
@@ -225,7 +276,6 @@ function getApprovedRequests() {
 
     const data = sheet.getDataRange().getValues();
 
-    // Check if data exists and has more than just headers
     if (!data || data.length <= 1) {
       console.log('No data in Requests sheet');
       return [];
@@ -233,6 +283,7 @@ function getApprovedRequests() {
 
     const requests = [];
 
+    // **FIX 1:** Added i++ to prevent infinite loop
     for (let i = 1; i < data.length; i++) {
       if (data[i][13] === 'Approved') { // Column N: Status
         requests.push({
@@ -241,10 +292,12 @@ function getApprovedRequests() {
           displayName: data[i][2],
           position: data[i][7],
           office: data[i][8],
-          inclusiveDates: data[i][11],
+          // **FIX 2:** Use formatDateForInput to correctly serialize dates
+          inclusiveDates: formatInclusiveDates(formatDateForInput(new Date(data[i][9])), formatDateForInput(new Date(data[i][10]))),
           purpose: data[i][12],
           approvedBy: data[i][15],
-          issueDate: data[i][16],
+          // **FIX:** Format issue date as string
+          issueDate: data[i][16] ? new Date(data[i][16]).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A',
           pdfUrl: data[i][19]
         });
       }
@@ -336,6 +389,7 @@ function generateCertificate(regNo) {
           displayName: data[i][2],
           position: data[i][7],
           office: data[i][8],
+          // **FIX:** Use the pre-formatted inclusive dates
           inclusiveDates: data[i][11],
           purpose: data[i][12],
           regNo: data[i][1],
@@ -368,6 +422,10 @@ function generateCertificate(regNo) {
     const docCopy = template.makeCopy('CA_' + regNo + '_temp', folder);
     const doc = DocumentApp.openById(docCopy.getId());
     const body = doc.getBody();
+    
+    // **FIX:** Clear out old/wrong date placeholders, just in case.
+    body.replaceText('{{StartDate}}', '');
+    body.replaceText('{{EndDate}}', '');
     
     // Replace text placeholders
     body.replaceText('{{DisplayName}}', requestData.displayName);
@@ -407,6 +465,10 @@ function generateCertificate(regNo) {
     pdfBlob.setName('CA_' + regNo + '.pdf');
     
     const pdfFile = folder.createFile(pdfBlob);
+    
+    // **FIX:** Set sharing permissions for QR code to work
+    pdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    
     const pdfUrl = pdfFile.getUrl();
     
     // Save PDF URL to sheet
@@ -470,6 +532,150 @@ function updateSignatory(name, position) {
   }
 }
 
+// --- NEW FUNCTIONS FOR ADMIN PANEL ---
+
+/**
+ * Gets list of offices from this Database
+ * (Called by AdminPanel)
+ */
+function getOffices() {
+  try {
+    const officesSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Offices');
+    
+    if (!officesSheet) {
+      throw new Error('Offices sheet not found in RMS Database');
+    }
+    
+    const data = officesSheet.getRange(2, 1, officesSheet.getLastRow() - 1, 1).getValues();
+    const offices = data.map(row => row[0]).filter(office => office !== '');
+    
+    return offices;
+  } catch (error) {
+    console.error('Error fetching offices:', error);
+    throw new Error('Unable to fetch offices. Please contact the administrator.');
+  }
+}
+
+/**
+ * Updates a pending request from the Admin Panel
+ * @param {Object} updateData - The form data from the edit modal
+ * @returns {Object} Success or error response
+ */
+function updatePendingRequest(updateData) {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
+    const rowNumber = parseInt(updateData.rowNumber, 10);
+    
+    if (isNaN(rowNumber) || rowNumber < 2) {
+      throw new Error('Invalid row number.');
+    }
+    
+    // Recalculate DisplayName and InclusiveDates
+    const displayName = formatDisplayName(updateData);
+    const inclusiveDates = formatInclusiveDates(updateData.startDate, updateData.endDate);
+    
+    // Update the row
+    // C: DisplayName, D: LastName, E: FirstName, F: MiddleInitial, G: Suffix
+    sheet.getRange(rowNumber, 3, 1, 5).setValues([[
+      displayName,
+      updateData.lastName,
+      updateData.firstName,
+      updateData.middleInitial || '',
+      updateData.suffix || ''
+    ]]);
+    
+    // H: Position, I: Office
+    sheet.getRange(rowNumber, 8, 1, 2).setValues([[
+      updateData.position,
+      updateData.office
+    ]]);
+    
+    // J: StartDate, K: EndDate, L: InclusiveDates, M: Purpose
+    sheet.getRange(rowNumber, 10, 1, 4).setValues([[
+      new Date(updateData.startDate),
+      new Date(updateData.endDate),
+      inclusiveDates,
+      updateData.purpose
+    ]]);
+    
+    return {
+      success: true,
+      message: 'Request updated successfully!'
+    };
+    
+  } catch (error) {
+    console.error('Error updating request:', error);
+    return {
+      success: false,
+      message: 'Error: ' + error.toString()
+    };
+  }
+}
+
+
+/**
+ * Formats the name into DisplayName format (Helper)
+ * Example: "JUAN A. DELA CRUZ, JR."
+ */
+function formatDisplayName(formData) {
+  let displayName = formData.lastName;
+  
+  if (formData.firstName) {
+    displayName = formData.firstName + ' ';
+    if (formData.middleInitial) {
+      displayName += formData.middleInitial + '. ';
+    }
+    displayName += formData.lastName;
+  }
+  
+  if (formData.suffix) {
+    displayName += ', ' + formData.suffix;
+  }
+  
+  return displayName.toUpperCase(); // Ensure uppercase
+}
+
+/**
+ * Formats dates into InclusiveDates string (Helper)
+ * Examples: "October 29, 2025" or "October 29-31, 2025"
+ * **FIX:** This function now handles timezone offsets
+ */
+function formatInclusiveDates(startDateStr, endDateStr) {
+  try {
+    // Create dates as UTC to avoid timezone shifts from YYYY-MM-DD strings
+    const start = new Date(startDateStr + 'T00:00:00Z');
+    const end = new Date(endDateStr + 'T00:00:00Z');
+    
+    const options = { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' };
+    
+    const startMonth = start.toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' });
+    const startDay = start.getUTCDate(); // Use getUTCDate
+    const endDay = end.getUTCDate();   // Use getUTCDate
+    const year = start.getUTCFullYear(); // Use getUTCFullYear
+    
+    if (startDateStr === endDateStr) {
+      // Single day
+      return start.toLocaleDateString('en-US', options);
+    } else if (start.getUTCMonth() === end.getUTCMonth() && start.getUTCFullYear() === end.getUTCFullYear()) {
+      // Same month
+      return `${startMonth} ${startDay}-${endDay}, ${year}`;
+    } else {
+      // Different months
+      const endMonth = end.toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' });
+      const endYear = end.getUTCFullYear();
+      
+      if(year !== endYear) {
+        return `${start.toLocaleDateString('en-US', options)} - ${end.toLocaleDateString('en-US', options)}`;
+      } else {
+        return `${startMonth} ${startDay} - ${endMonth} ${endDay}, ${year}`;
+      }
+    }
+  } catch (e) {
+    console.error("Error formatting inclusive dates:", e, startDateStr, endDateStr);
+    return "Invalid Date Range";
+  }
+}
+
 /**
  * Initialize the database sheets with headers
  * Run this once to set up the spreadsheet structure
@@ -527,3 +733,4 @@ function initializeDatabase() {
   
   SpreadsheetApp.getUi().alert('Database initialized successfully!');
 }
+

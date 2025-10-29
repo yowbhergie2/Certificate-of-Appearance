@@ -264,8 +264,25 @@
             </svg>
           </div>
         </div>
-        <div id="historyRequests" class="space-y-4 p-6">
-          <!-- Will be populated dynamically -->
+        <div class="p-6 overflow-x-auto">
+          <table id="historyTable" class="min-w-full bg-white border border-gray-200 rounded-lg">
+            <thead class="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Reg No</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Position</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Office</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Dates</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Requested</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Action By</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody">
+              <!-- Will be populated dynamically -->
+            </tbody>
+          </table>
+          <div id="noHistoryRequests" class="hidden text-gray-500 text-center py-8">No requests found</div>
         </div>
       </div>
 
@@ -468,7 +485,9 @@
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Purpose <span class="text-red-500">*</span></label>
             <input type="text" id="editPurpose" name="purpose" required
-                   class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                   oninput="smartPurpose(this)">
+            <p class="text-xs text-gray-500 mt-1">Use past tense (e.g., "Attended meeting" not "Attend meeting")</p>
           </div>
         </div>
         
@@ -538,6 +557,48 @@
         if (word.length > 0) {
           return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
         }
+        return word;
+      });
+
+      input.value = words.join(' ');
+
+      // Restore cursor position
+      input.setSelectionRange(cursorPos, cursorPos);
+    }
+
+    /**
+     * Smart grammar checking for Purpose field
+     * - Capitalizes first letter
+     * - Ensures sentence case (not all caps)
+     * - Checks for past tense patterns
+     */
+    function smartPurpose(input) {
+      const cursorPos = input.selectionStart;
+      let value = input.value;
+
+      if (value.length === 0) return;
+
+      // Capitalize first letter only
+      value = value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+
+      // Common words that should stay lowercase (unless first word)
+      const lowercaseWords = ['a', 'an', 'the', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'and', 'or', 'but'];
+
+      // Split into words and apply proper case
+      let words = value.split(' ');
+      words = words.map((word, index) => {
+        // Keep first word capitalized
+        if (index === 0) {
+          return word.charAt(0).toUpperCase() + word.slice(1);
+        }
+
+        // Check if word should be lowercase
+        const lowerWord = word.toLowerCase();
+        if (lowercaseWords.includes(lowerWord)) {
+          return lowerWord;
+        }
+
+        // Keep other words as-is (already lowercased from initial transform)
         return word;
       });
 
@@ -843,58 +904,56 @@
     }
 
     function renderHistoryRequests(requests) {
-      const container = document.getElementById('historyRequests');
-      container.innerHTML = ''; // Clear existing
+      const tableBody = document.getElementById('historyTableBody');
+      const noResultsDiv = document.getElementById('noHistoryRequests');
+      const table = document.getElementById('historyTable');
+
+      tableBody.innerHTML = ''; // Clear existing
 
       // Clear search
       const searchInput = document.getElementById('historySearchInput');
       if (searchInput) searchInput.value = '';
 
       if (!requests || requests.length === 0) {
-        container.innerHTML = '<p id="noHistoryRequests" class="text-gray-500 text-center py-8">No requests found</p>';
+        table.classList.add('hidden');
+        noResultsDiv.classList.remove('hidden');
       } else {
+        table.classList.remove('hidden');
+        noResultsDiv.classList.add('hidden');
+
         requests.forEach(req => {
-          const card = createHistoryCard(req);
-          container.appendChild(card);
+          const row = createHistoryRow(req);
+          tableBody.appendChild(row);
         });
       }
     }
 
-    function createHistoryCard(req) {
-      const card = document.createElement('div');
-      card.className = 'bg-white border border-gray-200 rounded-lg p-4 shadow-sm request-card';
+    function createHistoryRow(req) {
+      const row = document.createElement('tr');
+      row.className = 'border-b border-gray-200 hover:bg-gray-50 history-row';
 
       // Status badge
       let statusBadge = '';
       if (req.status === 'Approved') {
-        statusBadge = '<span class="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">Approved</span>';
+        statusBadge = '<span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">Approved</span>';
       } else if (req.status === 'Rejected') {
-        statusBadge = '<span class="px-3 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full">Rejected</span>';
+        statusBadge = '<span class="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full">Rejected</span>';
       } else {
-        statusBadge = '<span class="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">Pending</span>';
+        statusBadge = '<span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">Pending</span>';
       }
 
-      card.innerHTML = `
-        <div class="flex flex-col">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center">
-              <span class="font-bold text-blue-700 text-lg">${req.displayName}</span>
-              <span class="ml-3 px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">${req.registrationNo}</span>
-            </div>
-            ${statusBadge}
-          </div>
-          <p class="text-gray-600 text-sm"><strong>Position:</strong> ${req.position}</p>
-          <p class="text-gray-600 text-sm"><strong>Office:</strong> ${req.office}</p>
-          <p class="text-gray-600 text-sm"><strong>Dates:</strong> ${req.inclusiveDates}</p>
-          <p class="text-gray-600 text-sm"><strong>Purpose:</strong> ${req.purpose}</p>
-          <p class="text-sm text-gray-500 mt-2"><strong>Requested:</strong> ${formatRequestTimestamp(req.timestamp)}</p>
-          ${req.status === 'Approved' ? `<p class="text-sm text-green-600"><strong>Approved By:</strong> ${req.approvedBy || 'N/A'}</p>` : ''}
-          ${req.status === 'Approved' && req.issueDate ? `<p class="text-sm text-green-600"><strong>Issue Date:</strong> ${req.issueDate}</p>` : ''}
-          ${req.status === 'Rejected' ? `<p class="text-sm text-red-600"><strong>Rejected By:</strong> ${req.approvedBy || 'N/A'}</p>` : ''}
-        </div>
+      row.innerHTML = `
+        <td class="px-4 py-3 text-sm text-gray-900 font-medium">${req.registrationNo}</td>
+        <td class="px-4 py-3 text-sm text-gray-900">${req.displayName}</td>
+        <td class="px-4 py-3 text-sm text-gray-600">${req.position}</td>
+        <td class="px-4 py-3 text-sm text-gray-600">${req.office}</td>
+        <td class="px-4 py-3 text-sm text-gray-600">${req.inclusiveDates}</td>
+        <td class="px-4 py-3 text-sm">${statusBadge}</td>
+        <td class="px-4 py-3 text-sm text-gray-600">${formatRequestTimestamp(req.timestamp)}</td>
+        <td class="px-4 py-3 text-sm text-gray-600">${req.approvedBy || 'N/A'}</td>
       `;
 
-      return card;
+      return row;
     }
     
     // --- Card Creation ---
@@ -1042,9 +1101,12 @@
             // Clear cache to force reload
             dataCache.approvedRequests = null;
 
-            showSuccessModal(response.message);
+            // Open PDF in new tab for preview (don't show success modal yet)
             if (response.pdfUrl) {
               window.open(response.pdfUrl, '_blank');
+              showSuccessModal('Certificate generated successfully! The PDF has been opened in a new tab.');
+            } else {
+              showSuccessModal(response.message);
             }
             loadApprovedRequests(true);
           } else {
@@ -1338,37 +1400,35 @@
 
     function filterHistoryRequests() {
       const searchTerm = document.getElementById('historySearchInput').value.toUpperCase();
-      const requestsContainer = document.getElementById('historyRequests');
-      const cards = requestsContainer.querySelectorAll('.request-card');
+      const tableBody = document.getElementById('historyTableBody');
+      const rows = tableBody.querySelectorAll('.history-row');
       let foundRequest = false;
 
-      cards.forEach(card => {
-        const cardText = card.textContent || card.innerText;
-        if (cardText.toUpperCase().indexOf(searchTerm) > -1) {
-          card.style.display = '';
+      rows.forEach(row => {
+        const rowText = row.textContent || row.innerText;
+        if (rowText.toUpperCase().indexOf(searchTerm) > -1) {
+          row.style.display = '';
           foundRequest = true;
         } else {
-          card.style.display = 'none';
+          row.style.display = 'none';
         }
       });
 
-      // Handle 'no results' message
-      let noResultsMsg = requestsContainer.querySelector('#noHistorySearchResults');
-      if (noResultsMsg) {
-        noResultsMsg.remove();
-      }
+      // Show/hide table and no results message
+      const table = document.getElementById('historyTable');
+      const noResultsDiv = document.getElementById('noHistoryRequests');
 
-      const noHistoryMsg = requestsContainer.querySelector('#noHistoryRequests');
-
-      if (!foundRequest && cards.length > 0) {
-        noResultsMsg = document.createElement('p');
-        noResultsMsg.id = 'noHistorySearchResults';
-        noResultsMsg.className = 'text-gray-500 text-center py-8';
-        noResultsMsg.textContent = 'No requests found matching your search.';
-        requestsContainer.appendChild(noResultsMsg);
-        if(noHistoryMsg) noHistoryMsg.style.display = 'none'; // Hide original 'no history'
-      } else if (noHistoryMsg) {
-         noHistoryMsg.style.display = (cards.length === 0) ? 'block' : 'none';
+      if (!foundRequest && rows.length > 0) {
+        table.classList.add('hidden');
+        noResultsDiv.classList.remove('hidden');
+        noResultsDiv.textContent = 'No requests found matching your search.';
+      } else if (rows.length === 0) {
+        table.classList.add('hidden');
+        noResultsDiv.classList.remove('hidden');
+        noResultsDiv.textContent = 'No requests found';
+      } else {
+        table.classList.remove('hidden');
+        noResultsDiv.classList.add('hidden');
       }
     }
 

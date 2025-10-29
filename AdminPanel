@@ -432,7 +432,8 @@
           document.getElementById('signatoryName').value = signatory.name;
           document.getElementById('signatoryPosition').value = signatory.position;
         })
-        .withFailureHandler(handleAdminError); // Added failure handler
+        .withFailureHandler(handleAdminError)
+        .getSignatory();
     }
     
     function handleSignatoryUpdate(event) {

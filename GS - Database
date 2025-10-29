@@ -1,0 +1,459 @@
+
+/**
+ * RMS CA DATABASE - Code.gs
+ * This is the private admin-only spreadsheet that serves as the central database.
+ * It contains all backend logic for admin operations and the public Web App.
+ */
+
+// Configuration
+const GOOGLE_DOC_TEMPLATE_ID = '1Ibxh8clLTd-9h-h0PkGRYjSw0Q_klxCuw8PXVpYM-NE';
+const DRIVE_FOLDER_ID = '12FhqSr_I5C0i0hylaD2CD2l-PySppSkg';
+
+/**
+ * Creates custom menu when spreadsheet opens
+ */
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('🛡️ RMS Admin')
+    .addItem('Admin Panel', 'showAdminPanel')
+    .addSeparator()
+    .addItem('Get Web App URL', 'showWebAppUrl')
+    .addToUi();
+}
+
+/**
+ * Shows the admin panel modal
+ */
+function showAdminPanel() {
+  const html = HtmlService.createHtmlOutputFromFile('AdminPanel')
+    .setWidth(900)
+    .setHeight(700);
+  SpreadsheetApp.getUi().showModalDialog(html, 'RMS Admin Panel');
+}
+
+/**
+ * Shows the Web App URL for QR code verification
+ */
+function showWebAppUrl() {
+  const url = ScriptApp.getService().getUrl();
+  const ui = SpreadsheetApp.getUi();
+  ui.alert('Web App URL', 
+           'Your QR code verification URL:\n\n' + url + '\n\n' +
+           'Make sure the Web App is deployed as "Execute as: Me" and "Who has access: Anyone"',
+           ui.ButtonSet.OK);
+}
+
+/**
+ * Web App - Handles verification page requests
+ */
+function doGet(e) {
+  const regNo = e.parameter.id;
+  
+  if (!regNo) {
+    return HtmlService.createHtmlOutput('<h1>Invalid Request</h1><p>No registration number provided.</p>');
+  }
+  
+  // Get the request data
+  const requestData = getRequestByRegNo(regNo);
+  
+  // Create and return the verification page
+  const template = HtmlService.createTemplateFromFile('VerificationPage');
+  template.requestData = requestData;
+  template.regNo = regNo;
+  
+  return template.evaluate()
+    .setTitle('Certificate Verification')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+/**
+ * Gets request data by registration number
+ */
+function getRequestByRegNo(regNo) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
+  const data = sheet.getDataRange().getValues();
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][1] === regNo) { // Column B: RegistrationNo
+      return {
+        found: true,
+        registrationNo: data[i][1],
+        displayName: data[i][2],
+        position: data[i][7],
+        office: data[i][8],
+        inclusiveDates: data[i][11],
+        purpose: data[i][12],
+        status: data[i][13],
+        issueDate: data[i][16] || 'N/A',
+        approvedBy: data[i][15] || 'N/A'
+      };
+    }
+  }
+  
+  return { found: false };
+}
+
+/**
+ * Gets dashboard statistics
+ */
+function getDashboardStats() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
+  const data = sheet.getDataRange().getValues();
+  
+  let totalPending = 0;
+  let totalApproved = 0;
+  let totalRejected = 0;
+  const officeCounts = {};
+  
+  for (let i = 1; i < data.length; i++) {
+    const status = data[i][13]; // Column N: Status
+    const office = data[i][8];  // Column I: Office
+    
+    if (status === 'Pending') totalPending++;
+    if (status === 'Approved') totalApproved++;
+    if (status === 'Rejected') totalRejected++;
+    
+    if (office) {
+      officeCounts[office] = (officeCounts[office] || 0) + 1;
+    }
+  }
+  
+  // Get top 5 offices
+  const topOffices = Object.entries(officeCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([office, count]) => ({ office, count }));
+  
+  return {
+    totalPending,
+    totalApproved,
+    totalRejected,
+    topOffices
+  };
+}
+
+/**
+ * Gets all pending requests
+ */
+function getPendingRequests() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
+  const data = sheet.getDataRange().getValues();
+  const requests = [];
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][13] === 'Pending') { // Column N: Status
+      requests.push({
+        rowNumber: i + 1,
+        registrationNo: data[i][1],
+        displayName: data[i][2],
+        position: data[i][7],
+        office: data[i][8],
+        inclusiveDates: data[i][11],
+        purpose: data[i][12],
+        submittedBy: data[i][14],
+        timestamp: data[i][0]
+      });
+    }
+  }
+  
+  return requests.reverse(); // Show newest first
+}
+
+/**
+ * Gets approved requests (most recent 20)
+ */
+function getApprovedRequests() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
+  const data = sheet.getDataRange().getValues();
+  const requests = [];
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][13] === 'Approved') { // Column N: Status
+      requests.push({
+        rowNumber: i + 1,
+        registrationNo: data[i][1],
+        displayName: data[i][2],
+        position: data[i][7],
+        office: data[i][8],
+        inclusiveDates: data[i][11],
+        purpose: data[i][12],
+        approvedBy: data[i][15],
+        issueDate: data[i][16],
+        pdfUrl: data[i][19]
+      });
+    }
+  }
+  
+  return requests.reverse().slice(0, 20); // Show 20 most recent
+}
+
+/**
+ * Approves a request
+ */
+function approveRequest(rowNumber, regNo) {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
+    const approvedBy = Session.getActiveUser().getEmail();
+    const issueDate = new Date();
+    
+    // Get the Web App URL
+    const webAppUrl = ScriptApp.getService().getUrl();
+    const verificationUrl = webAppUrl + '?id=' + regNo;
+    
+    // Generate QR code URL using an external API
+    const qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + 
+                      encodeURIComponent(verificationUrl);
+    
+    // Update the row
+    sheet.getRange(rowNumber, 14).setValue('Approved'); // Column N: Status
+    sheet.getRange(rowNumber, 16).setValue(approvedBy);  // Column P: ApprovedBy
+    sheet.getRange(rowNumber, 17).setValue(issueDate);   // Column Q: IssueDate
+    sheet.getRange(rowNumber, 18).setValue(qrCodeUrl);   // Column R: QRCodeLink
+    sheet.getRange(rowNumber, 19).setValue(verificationUrl); // Column S: VerificationURL
+    
+    return {
+      success: true,
+      message: 'Request approved successfully!'
+    };
+  } catch (error) {
+    console.error('Error approving request:', error);
+    return {
+      success: false,
+      message: 'Error: ' + error.toString()
+    };
+  }
+}
+
+/**
+ * Rejects a request
+ */
+function rejectRequest(rowNumber) {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
+    const rejectedBy = Session.getActiveUser().getEmail();
+    
+    sheet.getRange(rowNumber, 14).setValue('Rejected'); // Column N: Status
+    sheet.getRange(rowNumber, 16).setValue(rejectedBy);  // Column P: ApprovedBy (storing who rejected)
+    
+    return {
+      success: true,
+      message: 'Request rejected.'
+    };
+  } catch (error) {
+    console.error('Error rejecting request:', error);
+    return {
+      success: false,
+      message: 'Error: ' + error.toString()
+    };
+  }
+}
+
+/**
+ * Generates a PDF certificate
+ * This is the most critical function
+ */
+function generateCertificate(regNo) {
+  try {
+    // Get the request data
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
+    const data = sheet.getDataRange().getValues();
+    let requestData = null;
+    let rowNumber = null;
+    
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][1] === regNo && data[i][13] === 'Approved') {
+        requestData = {
+          displayName: data[i][2],
+          position: data[i][7],
+          office: data[i][8],
+          inclusiveDates: data[i][11],
+          purpose: data[i][12],
+          regNo: data[i][1],
+          issueDate: data[i][16],
+          qrCodeLink: data[i][17]
+        };
+        rowNumber = i + 1;
+        break;
+      }
+    }
+    
+    if (!requestData) {
+      throw new Error('Request not found or not approved');
+    }
+    
+    // Get signatory data
+    const signatorySheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Signatories');
+    const signatoryData = signatorySheet.getRange(2, 1, 1, 2).getValues()[0];
+    const signatoryName = signatoryData[0] || 'N/A';
+    const signatoryPosition = signatoryData[1] || 'N/A';
+    
+    // Format issue date
+    const issueDate = Utilities.formatDate(new Date(requestData.issueDate), 
+                                          Session.getScriptTimeZone(), 
+                                          'MMMM dd, yyyy');
+    
+    // Make a copy of the template
+    const template = DriveApp.getFileById(GOOGLE_DOC_TEMPLATE_ID);
+    const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+    const docCopy = template.makeCopy('CA_' + regNo + '_temp', folder);
+    const doc = DocumentApp.openById(docCopy.getId());
+    const body = doc.getBody();
+    
+    // Replace text placeholders
+    body.replaceText('{{DisplayName}}', requestData.displayName);
+    body.replaceText('{{Position}}', requestData.position);
+    body.replaceText('{{Office}}', requestData.office);
+    body.replaceText('{{Purpose}}', requestData.purpose);
+    body.replaceText('{{InclusiveDates}}', requestData.inclusiveDates);
+    body.replaceText('{{RegNo}}', requestData.regNo);
+    body.replaceText('{{SignatoryName}}', signatoryName);
+    body.replaceText('{{SignatoryPosition}}', signatoryPosition);
+    body.replaceText('{{IssueDate}}', issueDate);
+    
+    // Replace QR code placeholder with actual image
+    const qrCodeImageBlob = UrlFetchApp.fetch(requestData.qrCodeLink).getBlob();
+    
+    // Find and replace {{QRCode}} placeholder
+    const searchResult = body.findText('{{QRCode}}');
+    if (searchResult) {
+      const element = searchResult.getElement();
+      const parent = element.getParent();
+      const childIndex = parent.getChildIndex(element);
+      
+      // Remove the placeholder text
+      element.asText().setText('');
+      
+      // Insert the image
+      if (parent.getType() === DocumentApp.ElementType.PARAGRAPH) {
+        parent.asParagraph().insertInlineImage(childIndex, qrCodeImageBlob);
+      }
+    }
+    
+    // Save and close the document
+    doc.saveAndClose();
+    
+    // Convert to PDF
+    const pdfBlob = docCopy.getAs('application/pdf');
+    pdfBlob.setName('CA_' + regNo + '.pdf');
+    
+    const pdfFile = folder.createFile(pdfBlob);
+    const pdfUrl = pdfFile.getUrl();
+    
+    // Save PDF URL to sheet
+    sheet.getRange(rowNumber, 20).setValue(pdfUrl); // Column T: GeneratedPDF_URL
+    
+    // Delete the temporary doc
+    docCopy.setTrashed(true);
+    
+    return {
+      success: true,
+      message: 'Certificate generated successfully!',
+      pdfUrl: pdfUrl
+    };
+    
+  } catch (error) {
+    console.error('Error generating certificate:', error);
+    return {
+      success: false,
+      message: 'Error generating certificate: ' + error.toString()
+    };
+  }
+}
+
+/**
+ * Gets current signatory
+ */
+function getSignatory() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Signatories');
+    const data = sheet.getRange(2, 1, 1, 2).getValues()[0];
+    
+    return {
+      name: data[0] || '',
+      position: data[1] || ''
+    };
+  } catch (error) {
+    console.error('Error getting signatory:', error);
+    return { name: '', position: '' };
+  }
+}
+
+/**
+ * Updates signatory information
+ */
+function updateSignatory(name, position) {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Signatories');
+    sheet.getRange(2, 1).setValue(name);
+    sheet.getRange(2, 2).setValue(position);
+    
+    return {
+      success: true,
+      message: 'Signatory updated successfully!'
+    };
+  } catch (error) {
+    console.error('Error updating signatory:', error);
+    return {
+      success: false,
+      message: 'Error: ' + error.toString()
+    };
+  }
+}
+
+/**
+ * Initialize the database sheets with headers
+ * Run this once to set up the spreadsheet structure
+ */
+function initializeDatabase() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  // Create or get Requests sheet
+  let requestsSheet = ss.getSheetByName('Requests');
+  if (!requestsSheet) {
+    requestsSheet = ss.insertSheet('Requests');
+  }
+  
+  // Set headers for Requests
+  const requestsHeaders = [
+    'Timestamp', 'RegistrationNo', 'DisplayName', 'LastName', 'FirstName', 
+    'MiddleInitial', 'Suffix', 'Position', 'Office', 'StartDate', 'EndDate', 
+    'InclusiveDates', 'Purpose', 'Status', 'SubmittedBy', 'ApprovedBy', 
+    'IssueDate', 'QRCodeLink', 'VerificationURL', 'GeneratedPDF_URL'
+  ];
+  requestsSheet.getRange(1, 1, 1, requestsHeaders.length).setValues([requestsHeaders]);
+  requestsSheet.getRange(1, 1, 1, requestsHeaders.length).setFontWeight('bold');
+  
+  // Create or get Offices sheet
+  let officesSheet = ss.getSheetByName('Offices');
+  if (!officesSheet) {
+    officesSheet = ss.insertSheet('Offices');
+  }
+  
+  officesSheet.getRange(1, 1).setValue('Office Name');
+  officesSheet.getRange(1, 1).setFontWeight('bold');
+  
+  // Add sample offices
+  const sampleOffices = [
+    ['Human Resources'],
+    ['Finance'],
+    ['IT Department'],
+    ['Operations'],
+    ['Marketing']
+  ];
+  officesSheet.getRange(2, 1, sampleOffices.length, 1).setValues(sampleOffices);
+  
+  // Create or get Signatories sheet
+  let signatoriesSheet = ss.getSheetByName('Signatories');
+  if (!signatoriesSheet) {
+    signatoriesSheet = ss.insertSheet('Signatories');
+  }
+  
+  const signatoryHeaders = ['Name', 'Position'];
+  signatoriesSheet.getRange(1, 1, 1, 2).setValues([signatoryHeaders]);
+  signatoriesSheet.getRange(1, 1, 1, 2).setFontWeight('bold');
+  
+  // Add default signatory
+  signatoriesSheet.getRange(2, 1, 1, 2).setValues([['John Doe', 'Director, RMS']]);
+  
+  SpreadsheetApp.getUi().alert('Database initialized successfully!');
+}

@@ -9,27 +9,72 @@
       font-family: "Tahoma", sans-serif;
     }
     .tab-active {
-      background-color: #3b82f6;
+      background-color: #3b82f6; /* blue-600 */
       color: white;
     }
+    /* Simple spinner */
     .spinner {
-      border: 3px solid #f3f3f3;
-      border-top: 3px solid #3b82f6;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3b82f6;
       border-radius: 50%;
-      width: 30px;
-      height: 30px;
+      width: 40px;
+      height: 40px;
       animation: spin 1s linear infinite;
     }
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+    
+    /* Modal styles */
+    .modal {
+      transition: opacity 0.25s ease;
+    }
+    .modal-content {
+      transition: transform 0.25s ease;
+      transform: translateY(-20px);
+    }
+    .modal.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal.show .modal-content {
+      transform: translateY(0);
+    }
+    
+    /* Custom focus styles for inputs */
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #3b82f6; /* blue-500 */
+      box-shadow: 0 0 0 2px #bfdbfe; /* blue-200 */
+    }
+    
+    /* Uppercase inputs */
+    .uppercase-input {
+      text-transform: uppercase;
+    }
+    .uppercase-input::placeholder {
+      text-transform: none;
+    }
+
+    /* **NEW:** Class for the sticky subheader (search) */
+    .sticky-subheader {
+      position: sticky;
+      top: 49px; /* Height of the main tabs */
+      z-index: 9; /* Below main tabs but above content */
+      background-color: white;
+    }
+
   </style>
 </head>
 <body class="bg-gray-100">
+
   <div class="p-6">
-    <!-- Tab Navigation -->
-    <div class="bg-white rounded-t-lg shadow">
+    <!-- Tab Navigation - Made sticky -->
+    <!-- **FIX:** Added shadow-md and z-20 -->
+    <div class="bg-white rounded-t-lg shadow-md sticky top-0 z-20">
       <div class="flex border-b">
         <button onclick="switchTab('dashboard')" id="tab-dashboard" 
                 class="tab-active px-6 py-3 font-medium transition">
@@ -51,47 +96,101 @@
     </div>
     
     <!-- Tab Content Container -->
-    <div class="bg-white rounded-b-lg shadow p-6">
+    <!-- **FIX:** Removed rounded-b-lg and shadow from here -->
+    <div class="bg-white">
       
       <!-- Dashboard Tab -->
-      <div id="content-dashboard" class="tab-content">
+      <!-- **FIX:** Added back p-6 for padding -->
+      <div id="content-dashboard" class="tab-content p-6">
         <h2 class="text-2xl font-bold text-gray-800 mb-6">Dashboard Overview</h2>
         
         <!-- Stats Cards -->
-        <div class="grid grid-cols-3 gap-4 mb-8">
-          <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-5 shadow-sm">
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm text-yellow-700 font-medium">Pending Requests</p>
                 <p id="stat-pending" class="text-3xl font-bold text-yellow-800">0</p>
               </div>
-              <svg class="w-12 h-12 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
+              <div class="bg-yellow-100 rounded-full p-3">
+                <svg class="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
             </div>
           </div>
           
-          <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div class="bg-green-50 border border-green-200 rounded-lg p-5 shadow-sm">
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm text-green-700 font-medium">Approved</p>
                 <p id="stat-approved" class="text-3xl font-bold text-green-800">0</p>
               </div>
-              <svg class="w-12 h-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
+              <div class="bg-green-100 rounded-full p-3">
+                <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
             </div>
           </div>
           
-          <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div class="bg-red-50 border border-red-200 rounded-lg p-5 shadow-sm">
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm text-red-700 font-medium">Rejected</p>
                 <p id="stat-rejected" class="text-3xl font-bold text-red-800">0</p>
               </div>
-              <svg class="w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
+              <div class="bg-red-100 rounded-full p-3">
+                <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- **NEW:** Date-based Stats -->
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Requests by Period</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-5 shadow-sm">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-blue-700 font-medium">Today's Requests</p>
+                <p id="stat-today" class="text-3xl font-bold text-blue-800">0</p>
+              </div>
+              <div class="bg-blue-100 rounded-full p-3">
+                <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-purple-50 border border-purple-200 rounded-lg p-5 shadow-sm">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-purple-700 font-medium">This Month's Requests</p>
+                <p id="stat-month" class="text-3xl font-bold text-purple-800">0</p>
+              </div>
+              <div class="bg-purple-100 rounded-full p-3">
+                <svg class="w-8 h-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-5 shadow-sm">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-indigo-700 font-medium">This Year's Requests</p>
+                <p id="stat-year" class="text-3xl font-bold text-indigo-800">0</p>
+              </div>
+              <div class="bg-indigo-100 rounded-full p-3">
+                <svg class="w-8 h-8 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H7a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                </svg>
+              </div>
             </div>
           </div>
         </div>
@@ -107,22 +206,45 @@
       
       <!-- Pending Tab -->
       <div id="content-pending" class="tab-content hidden">
-        <h2 class="text-2xl font-bold text-gray-800 mb-6">Pending Requests</h2>
-        <div id="pendingRequests" class="space-y-4">
+        <!-- **NEW:** Sticky Subheader for Search -->
+        <div class="sticky-subheader flex justify-between items-center p-6 border-b">
+          <h2 class="text-2xl font-bold text-gray-800">Pending Requests</h2>
+          <div class="relative w-full md:w-1/3">
+            <input type="text" id="searchInput" onkeyup="filterPendingRequests()" placeholder="Search by name, office, purpose..."
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <svg class="w-5 h-5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
+        </div>
+        <!-- **FIX:** Added p-6 for padding -->
+        <div id="pendingRequests" class="space-y-4 p-6">
           <!-- Will be populated dynamically -->
         </div>
       </div>
       
       <!-- Approved & Print Tab -->
       <div id="content-approved" class="tab-content hidden">
-        <h2 class="text-2xl font-bold text-gray-800 mb-6">Approved Requests</h2>
-        <div id="approvedRequests" class="space-y-4">
+        <!-- **NEW:** Sticky Subheader for Search -->
+        <div class="sticky-subheader flex justify-between items-center p-6 border-b">
+          <h2 class="text-2xl font-bold text-gray-800">Approved Requests</h2>
+          <div class="relative w-full md:w-1/3">
+            <input type="text" id="approvedSearchInput" onkeyup="filterApprovedRequests()" placeholder="Search by name, office, reg no..."
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <svg class="w-5 h-5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
+        </div>
+        <!-- **FIX:** Added p-6 for padding -->
+        <div id="approvedRequests" class="space-y-4 p-6">
           <!-- Will be populated dynamically -->
         </div>
       </div>
       
       <!-- Settings Tab -->
-      <div id="content-settings" class="tab-content hidden">
+      <!-- **FIX:** Added back p-6 for padding -->
+      <div id="content-settings" class="tab-content hidden p-6">
         <h2 class="text-2xl font-bold text-gray-800 mb-6">Settings</h2>
         
         <div class="bg-gray-50 p-6 rounded-lg max-w-2xl">
@@ -133,19 +255,19 @@
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Signatory Name</label>
                 <input type="text" id="signatoryName" required
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
               </div>
               
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Position/Title</label>
                 <input type="text" id="signatoryPosition" required
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
               </div>
               
               <div id="settingsMessage" class="hidden"></div>
               
               <button type="submit" 
-                      class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">
+                      class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition shadow-sm">
                 Update Signatory
               </button>
             </div>
@@ -156,29 +278,286 @@
   </div>
   
   <!-- Loading Overlay -->
-  <div id="loadingOverlay" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+  <div id="loadingOverlay" class="hidden modal fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 pointer-events-none">
     <div class="bg-white p-6 rounded-lg shadow-xl text-center">
       <div class="spinner mx-auto mb-4"></div>
       <p id="loadingText" class="text-gray-700 font-medium">Loading...</p>
     </div>
   </div>
   
+  <!-- Success Modal -->
+  <div id="successModal" class="hidden modal fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 pointer-events-none">
+    <div class="modal-content bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4">
+      <div class="text-center">
+        <svg class="w-16 h-16 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <h3 id="successTitle" class="text-xl font-bold text-gray-800 mb-2">Success!</h3>
+        <p id="successMessage" class="text-gray-600 mb-6">Operation completed successfully.</p>
+        <button onclick="closeModal('successModal')" 
+                class="w-full px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+          OK
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Error Modal -->
+  <div id="errorModal" class="hidden modal fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 pointer-events-none">
+    <div class="modal-content bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4">
+      <div class="text-center">
+        <svg class="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <h3 id="errorTitle" class="text-xl font-bold text-gray-800 mb-2">Error!</h3>
+        <p id="errorMessage" class="text-gray-600 mb-6">An unexpected error occurred.</p>
+        <button onclick="closeModal('errorModal')" 
+                class="w-full px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Modal -->
+  <div id="confirmModal" class="hidden modal fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 pointer-events-none">
+    <div class="modal-content bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4">
+      <div class="text-center">
+        <svg class="w-16 h-16 text-yellow-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+        </svg>
+        <h3 id="confirmTitle" class="text-xl font-bold text-gray-800 mb-2">Are you sure?</h3>
+        <p id="confirmMessage" class="text-gray-600 mb-6">Do you really want to proceed?</p>
+        <div class="flex justify-center space-x-4">
+          <button id="confirmCancelBtn" onclick="closeModal('confirmModal')" 
+                  class="w-full px-6 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition">
+            Cancel
+          </button>
+          <button id="confirmOkBtn"
+                  class="w-full px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Edit Modal -->
+  <div id="editModal" class="hidden modal fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-40 opacity-0 pointer-events-none">
+    <!-- **FIX:** Changed structure for non-sticky header/footer and scrolling content -->
+    <div class="modal-content bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] flex flex-col">
+      <form id="editForm" onsubmit="handleUpdateRequest(event)" class="flex flex-col overflow-hidden h-full">
+        <!-- Modal Header -->
+        <!-- **FIX:** Removed sticky classes, added flex-shrink-0 -->
+        <div class="flex justify-between items-center p-6 border-b flex-shrink-0">
+          <h3 class="text-xl font-bold text-gray-800">Edit Pending Request</h3>
+          <button type="button" onclick="closeModal('editModal')" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        
+        <!-- Hidden input for rowNumber and timestamp -->
+        <input type="hidden" id="editRowNumber" name="rowNumber">
+        <input type="hidden" id="editTimestamp" name="timestamp">
+        
+        <!-- Form Content -->
+        <!-- **FIX:** Added overflow-y-auto, p-6 -->
+        <div class="space-y-4 p-6 overflow-y-auto">
+          
+          <!-- **NEW:** Added Date Requested Info -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Date Requested</label>
+            <!-- **FIX:** Removed italic and text-green-600 -->
+            <input type="text" id="editRequestDate" class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 font-medium" disabled>
+          </div>
+          
+          <h4 class="text-md font-semibold text-gray-700 border-b pb-1">Personal Information</h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Last Name <span class="text-red-500">*</span></label>
+              <input type="text" id="editLastName" name="lastName" required 
+                     class="w-full px-3 py-2 border border-gray-300 rounded-lg uppercase-input">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">First Name <span class="text-red-500">*</span></label>
+              <input type="text" id="editFirstName" name="firstName" required 
+                     class="w-full px-3 py-2 border border-gray-300 rounded-lg uppercase-input">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Middle Initial</label>
+              <input type="text" id="editMiddleInitial" name="middleInitial" maxlength="2"
+                     class="w-full px-3 py-2 border border-gray-300 rounded-lg uppercase-input">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Suffix</label>
+              <input type="text" id="editSuffix" name="suffix" placeholder="Jr., Sr., III"
+                     class="w-full px-3 py-2 border border-gray-300 rounded-lg uppercase-input">
+            </div>
+          </div>
+          
+          <h4 class="text-md font-semibold text-gray-700 border-b pb-1 pt-2">Work Details</h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Position <span class="text-red-500">*</span></label>
+              <input type="text" id="editPosition" name="position" required 
+                     class="w-full px-3 py-2 border border-gray-300 rounded-lg uppercase-input">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Office <span class="text-red-500">*</span></label>
+              <select id="editOffice" name="office" required onchange="handleEditOfficeChange()"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white">
+                <option value="">-- Select Office --</option>
+              </select>
+            </div>
+          </div>
+          <div id="editCustomOfficeContainer" class="hidden pt-2">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Specify Office <span class="text-red-500">*</span></label>
+            <input type="text" id="editCustomOffice" name="customOffice"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg uppercase-input">
+          </div>
+          
+          <h4 class="text-md font-semibold text-gray-700 border-b pb-1 pt-2">Period of Appearance</h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Start Date <span class="text-red-500">*</span></label>
+              <!-- Max date will be set by JS -->
+              <input type="date" id="editStartDate" name="startDate" required onchange="validateEditDates()"
+                     class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">End Date <span class="text-red-500">*</span></label>
+              <!-- Max date will be set by JS -->
+              <input type="date" id="editEndDate" name="endDate" required onchange="validateEditDates()"
+                     class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+            </div>
+          </div>
+          <p id="editDateError" class="text-red-500 text-sm mt-2 hidden"></p>
+          
+          <h4 class="text-md font-semibold text-gray-700 border-b pb-1 pt-2">Purpose</h4>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Purpose <span class="text-red-500">*</span></label>
+            <input type="text" id="editPurpose" name="purpose" required
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg uppercase-input">
+          </div>
+        </div>
+        
+        <!-- Modal Footer -->
+        <!-- **FIX:** Removed sticky classes, added flex-shrink-0 -->
+        <div class="flex justify-end space-x-3 p-6 border-t flex-shrink-0">
+          <button type="button" onclick="closeModal('editModal')" 
+                  class="px-6 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 font-medium hover:bg-gray-100 shadow-sm">
+            Cancel
+          </button>
+          <button type="submit" id="editSubmitBtn"
+                  class="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 shadow-sm">
+            Update Request
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  
   <script>
     let currentTab = 'dashboard';
+    let allOfficeOptions = []; // To store office list for the edit modal
     
     // Initialize on load
     window.onload = function() {
       loadDashboard();
       loadSignatory();
+      loadOfficeList(); // Load offices for the edit modal
     };
+
+    // **NEW:** Helper to format timestamp
+    function formatRequestTimestamp(isoString) {
+      if (!isoString) return 'N/A';
+      try {
+        const options = {
+          year: 'numeric', month: 'long', day: 'numeric',
+          hour: 'numeric', minute: 'numeric', hour12: true,
+          timeZone: 'Asia/Manila' // Force PHT
+        };
+        return new Date(isoString).toLocaleString('en-US', options);
+      } catch (e) {
+        console.error('Error formatting timestamp:', isoString, e);
+        return 'Invalid Date';
+      }
+    }
 
     // Helper function to handle all server errors
     function handleAdminError(error) {
       hideLoading();
-      alert('An error occurred: ' + error.message);
+      showErrorModal('An error occurred: ' + error.message);
       console.error('Apps Script Error:', error);
     }
     
+    // --- Modal Functions ---
+    function showModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) {
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.classList.add('show'), 10); // Start transition
+      }
+    }
+    
+    function closeModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.classList.add('hidden'), 250); // Wait for transition
+      }
+    }
+    
+    function showLoading(message = 'Loading...') {
+      document.getElementById('loadingText').textContent = message;
+      showModal('loadingOverlay');
+    }
+    
+    function hideLoading() {
+      closeModal('loadingOverlay');
+    }
+    
+    function showSuccessModal(message, title = 'Success!') {
+      document.getElementById('successTitle').textContent = title;
+      document.getElementById('successMessage').textContent = message;
+      showModal('successModal');
+    }
+    
+    function showErrorModal(message, title = 'Error!') {
+      document.getElementById('errorTitle').textContent = title;
+      document.getElementById('errorMessage').textContent = message;
+      showModal('errorModal');
+    }
+    
+    /**
+     * Shows a confirmation modal
+     * @param {string} message - The question to ask the user.
+     * @param {string} title - The title of the modal.
+     * @param {string} okButtonClass - Tailwind classes for the 'OK' button (e.g., 'bg-red-600 hover:bg-red-700').
+     * @param {function} onConfirm - The function to execute if the user confirms.
+     */
+    function showConfirmModal(message, title, okButtonClass, onConfirm) {
+      document.getElementById('confirmTitle').textContent = title;
+      document.getElementById('confirmMessage').textContent = message;
+      
+      const okBtn = document.getElementById('confirmOkBtn');
+      okBtn.className = `w-full px-6 py-2 text-white rounded-lg transition ${okButtonClass}`;
+      
+      // Remove previous listener and add new one
+      const newOkBtn = okBtn.cloneNode(true);
+      okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+      newOkBtn.addEventListener('click', () => {
+        closeModal('confirmModal');
+        onConfirm(); // Execute the callback
+      });
+      
+      showModal('confirmModal');
+    }
+    
+    // --- Tab Switching ---
     function switchTab(tabName) {
       // Hide all content
       document.querySelectorAll('.tab-content').forEach(content => {
@@ -209,50 +588,48 @@
       }
     }
     
-    function showLoading(message = 'Loading...') {
-      document.getElementById('loadingText').textContent = message;
-      document.getElementById('loadingOverlay').classList.remove('hidden');
-    }
-    
-    function hideLoading() {
-      document.getElementById('loadingOverlay').classList.add('hidden');
-    }
+    // --- Data Loading Functions ---
     
     function loadDashboard() {
       showLoading('Loading dashboard...');
       google.script.run
         .withSuccessHandler(function(stats) {
           try {
+            // Existing Stats
             document.getElementById('stat-pending').textContent = stats.totalPending;
             document.getElementById('stat-approved').textContent = stats.totalApproved;
             document.getElementById('stat-rejected').textContent = stats.totalRejected;
             document.getElementById('pendingCount').textContent = stats.totalPending;
             
+            // **NEW** Date Stats
+            document.getElementById('stat-today').textContent = stats.totalToday;
+            document.getElementById('stat-month').textContent = stats.totalMonth;
+            document.getElementById('stat-year').textContent = stats.totalYear;
+            
             const topOfficesDiv = document.getElementById('topOffices');
             topOfficesDiv.innerHTML = '';
             
-            // FIX: Check if stats.topOffices is null or empty
             if (!stats.topOffices || stats.topOffices.length === 0) {
               topOfficesDiv.innerHTML = '<p class="text-gray-500">No data available</p>';
             } else {
               stats.topOffices.forEach(item => {
                 const div = document.createElement('div');
-                div.className = 'flex items-center justify-between bg-gray-50 p-3 rounded';
+                div.className = 'flex items-center justify-between bg-gray-50 p-3 rounded-lg';
                 div.innerHTML = `
                   <span class="text-gray-700">${item.office}</span>
-                  <span class="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded">${item.count}</span>
+                  <span class="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">${item.count}</span>
                 `;
                 topOfficesDiv.appendChild(div);
               });
             }
           } catch (e) {
             console.error('Error rendering dashboard:', e);
-            alert('A client-side error occurred while displaying dashboard: ' + e.message);
+            showErrorModal('A client-side error occurred while displaying dashboard: ' + e.message);
           } finally {
             hideLoading();
           }
         })
-        .withFailureHandler(handleAdminError) // Added failure handler
+        .withFailureHandler(handleAdminError)
         .getDashboardStats();
     }
     
@@ -261,15 +638,17 @@
       google.script.run
         .withSuccessHandler(function(requests) {
           try {
-            // DEBUG: Log what the server is returning
-            console.log('Server response for getPendingRequests:', requests);
+            console.log('Server response for getPendingRequests:', requests); // DEBUG
             
             const container = document.getElementById('pendingRequests');
-            container.innerHTML = '';
+            container.innerHTML = ''; // Clear existing
             
-            // FIX: Check if requests is null or empty
+            // Clear search
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) searchInput.value = '';
+            
             if (!requests || requests.length === 0) {
-              container.innerHTML = '<p class="text-gray-500 text-center py-8">No pending requests</p>';
+              container.innerHTML = '<p id="noPendingRequests" class="text-gray-500 text-center py-8">No pending requests</p>';
             } else {
               requests.forEach(req => {
                 const card = createRequestCard(req, 'pending');
@@ -278,12 +657,12 @@
             }
           } catch (e) {
             console.error('Error rendering pending requests:', e);
-            alert('A client-side error occurred while displaying requests: ' + e.message);
+            showErrorModal('A client-side error occurred while displaying requests: ' + e.message);
           } finally {
             hideLoading();
           }
         })
-        .withFailureHandler(handleAdminError) // Added failure handler
+        .withFailureHandler(handleAdminError)
         .getPendingRequests();
     }
     
@@ -293,11 +672,14 @@
         .withSuccessHandler(function(requests) {
           try {
             const container = document.getElementById('approvedRequests');
-            container.innerHTML = '';
+            container.innerHTML = ''; // Clear existing
             
-            // FIX: Check if requests is null or empty
+            // Clear search
+            const searchInput = document.getElementById('approvedSearchInput');
+            if (searchInput) searchInput.value = '';
+            
             if (!requests || requests.length === 0) {
-              container.innerHTML = '<p class="text-gray-500 text-center py-8">No approved requests</p>';
+              container.innerHTML = '<p id="noApprovedRequests" class="text-gray-500 text-center py-8">No approved requests</p>';
             } else {
               requests.forEach(req => {
                 const card = createRequestCard(req, 'approved');
@@ -306,42 +688,63 @@
             }
           } catch (e) {
             console.error('Error rendering approved requests:', e);
-            alert('A client-side error occurred while displaying requests: ' + e.message);
+            showErrorModal('A client-side error occurred while displaying requests: ' + e.message);
           } finally {
             hideLoading();
           }
         })
-        .withFailureHandler(handleAdminError) // Added failure handler
+        .withFailureHandler(handleAdminError)
         .getApprovedRequests();
     }
     
+    // --- Card Creation ---
+    
     function createRequestCard(req, type) {
       const card = document.createElement('div');
-      card.className = 'bg-gray-50 border border-gray-200 rounded-lg p-4';
+      // Added request-card class for search and improved styling
+      card.className = 'bg-white border border-gray-200 rounded-lg p-4 shadow-sm request-card';
       
       let buttons = '';
+      let timestampInfo = ''; // **NEW**
+
       if (type === 'pending') {
+        // Store request data on the edit button for easy access
+        const reqData = encodeURIComponent(JSON.stringify(req));
+        
         buttons = `
           <button onclick="approveRequest(${req.rowNumber}, '${req.registrationNo}')"
-                  class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition mr-2">
+                  class="flex items-center justify-center w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition shadow-sm mb-2">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
             Approve
           </button>
+          <button onclick="openEditModal(this.dataset.req)" data-req="${reqData}"
+                  class="flex items-center justify-center w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm mb-2">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+            Edit
+          </button>
           <button onclick="rejectRequest(${req.rowNumber})"
-                  class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition">
+                  class="flex items-center justify-center w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition shadow-sm">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             Reject
           </button>
         `;
-      } else {
+        // **NEW:** Add timestamp info only for pending cards
+        // **FIX:** Added italic and text-green-600
+        timestampInfo = `<p class="text-sm italic text-green-600"><strong>Date Requested:</strong> ${formatRequestTimestamp(req.timestamp)}</p>`;
+      
+      } else { // Approved
         buttons = `
           <button onclick="generateCertificate('${req.registrationNo}')"
-                  class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
-            Generate Certificate
+                  class="flex items-center justify-center w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm mb-2">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            Generate
           </button>
         `;
         if (req.pdfUrl) {
           buttons += `
             <a href="${req.pdfUrl}" target="_blank"
-               class="ml-2 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition inline-block">
+               class="flex items-center justify-center w-full text-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition shadow-sm inline-block">
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
               View PDF
             </a>
           `;
@@ -349,18 +752,20 @@
       }
       
       card.innerHTML = `
-        <div class="flex justify-between items-start">
-          <div class="flex-1">
+        <div class="flex flex-col md:flex-row justify-between items-start">
+          <div class="flex-1 mb-4 md:mb-0 md:mr-4">
             <div class="flex items-center mb-2">
-              <span class="font-semibold text-gray-800 text-lg">${req.displayName}</span>
-              <span class="ml-3 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">${req.registrationNo}</span>
+              <!-- **FIX:** Added text-blue-700 and font-bold -->
+              <span class="font-bold text-blue-700 text-lg">${req.displayName}</span>
+              <span class="ml-3 px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">${req.registrationNo}</span>
             </div>
             <p class="text-gray-600 text-sm"><strong>Position:</strong> ${req.position}</p>
             <p class="text-gray-600 text-sm"><strong>Office:</strong> ${req.office}</p>
             <p class="text-gray-600 text-sm"><strong>Dates:</strong> ${req.inclusiveDates}</p>
             <p class="text-gray-600 text-sm"><strong>Purpose:</strong> ${req.purpose}</p>
+            ${timestampInfo} <!-- **NEW** -->
           </div>
-          <div class="ml-4">
+          <div class="w-full md:w-auto md:ml-4 flex-shrink-0">
             ${buttons}
           </div>
         </div>
@@ -369,42 +774,54 @@
       return card;
     }
     
+    // --- Request Actions (Approve, Reject, Generate) ---
+    
     function approveRequest(rowNumber, regNo) {
-      if (!confirm('Approve this request?')) return;
-      
-      showLoading('Approving request...');
-      google.script.run
-        .withSuccessHandler(function(response) {
-          hideLoading();
-          if (response.success) {
-            alert(response.message);
-            loadDashboard();
-            loadPendingRequests();
-          } else {
-            alert(response.message);
-          }
-        })
-        .withFailureHandler(handleAdminError) // Added failure handler
-        .approveRequest(rowNumber, regNo);
+      showConfirmModal(
+        `Are you sure you want to approve request ${regNo}?`,
+        'Confirm Approval',
+        'bg-green-600 hover:bg-green-700',
+        () => {
+          showLoading('Approving request...');
+          google.script.run
+            .withSuccessHandler(function(response) {
+              hideLoading();
+              if (response.success) {
+                showSuccessModal(response.message);
+                loadDashboard();
+                loadPendingRequests();
+              } else {
+                showErrorModal(response.message);
+              }
+            })
+            .withFailureHandler(handleAdminError)
+            .approveRequest(rowNumber, regNo);
+        }
+      );
     }
     
     function rejectRequest(rowNumber) {
-      if (!confirm('Reject this request?')) return;
-      
-      showLoading('Rejecting request...');
-      google.script.run
-        .withSuccessHandler(function(response) {
-          hideLoading();
-          if (response.success) {
-            alert(response.message);
-            loadDashboard();
-            loadPendingRequests();
-          } else {
-            alert(response.message);
-          }
-        })
-        .withFailureHandler(handleAdminError) // Added failure handler
-        .rejectRequest(rowNumber);
+      showConfirmModal(
+        'Are you sure you want to reject this request?',
+        'Confirm Rejection',
+        'bg-red-600 hover:bg-red-700',
+        () => {
+          showLoading('Rejecting request...');
+          google.script.run
+            .withSuccessHandler(function(response) {
+              hideLoading();
+              if (response.success) {
+                showSuccessModal(response.message);
+                loadDashboard();
+                loadPendingRequests();
+              } else {
+                showErrorModal(response.message);
+              }
+            })
+            .withFailureHandler(handleAdminError)
+            .rejectRequest(rowNumber);
+        }
+      );
     }
     
     function generateCertificate(regNo) {
@@ -413,28 +830,196 @@
         .withSuccessHandler(function(response) {
           hideLoading();
           if (response.success) {
-            alert(response.message);
+            showSuccessModal(response.message);
             if (response.pdfUrl) {
               window.open(response.pdfUrl, '_blank');
             }
             loadApprovedRequests();
           } else {
-            alert(response.message);
+            showErrorModal(response.message);
           }
         })
-        .withFailureHandler(handleAdminError) // Added failure handler
+        .withFailureHandler(handleAdminError)
         .generateCertificate(regNo);
     }
     
+    // --- Edit Request Functions ---
+    
+    function loadOfficeList() {
+      // Load and store office list for edit modal
+      google.script.run
+        .withSuccessHandler(function(offices) {
+          allOfficeOptions = offices; // Store them
+          const select = document.getElementById('editOffice');
+          select.innerHTML = '<option value="">-- Select Office --</option>'; // Clear
+          
+          offices.forEach(office => {
+            const option = document.createElement('option');
+            option.value = office;
+            option.textContent = office;
+            select.appendChild(option);
+          });
+          
+          const otherOption = document.createElement('option');
+          otherOption.value = 'Other';
+          otherOption.textContent = 'Other (Specify)';
+          select.appendChild(otherOption);
+        })
+        .withFailureHandler(handleAdminError)
+        .getOffices();
+    }
+    
+    function openEditModal(reqData) {
+      const req = JSON.parse(decodeURIComponent(reqData));
+      
+      // Populate form
+      document.getElementById('editRowNumber').value = req.rowNumber;
+      document.getElementById('editTimestamp').value = req.timestamp; 
+      document.getElementById('editRequestDate').value = formatRequestTimestamp(req.timestamp); // **NEW**
+      document.getElementById('editLastName').value = req.lastName;
+      document.getElementById('editFirstName').value = req.firstName;
+      document.getElementById('editMiddleInitial').value = req.middleInitial;
+      document.getElementById('editSuffix').value = req.suffix;
+      document.getElementById('editPosition').value = req.position;
+      document.getElementById('editPurpose').value = req.purpose;
+      document.getElementById('editStartDate').value = req.startDate;
+      document.getElementById('editEndDate').value = req.endDate;
+      
+      // **NEW:** Set max date based on timestamp
+      try {
+        const requestDate = new Date(req.timestamp);
+        const maxDate = requestDate.toISOString().split('T')[0];
+        document.getElementById('editStartDate').setAttribute('max', maxDate);
+        document.getElementById('editEndDate').setAttribute('max', maxDate);
+      } catch (e) {
+        console.error('Invalid timestamp for setting max date:', req.timestamp, e);
+        // Don't set max date if timestamp is invalid
+      }
+
+      // Handle office dropdown
+      const officeSelect = document.getElementById('editOffice');
+      const customOfficeContainer = document.getElementById('editCustomOfficeContainer');
+      const customOfficeInput = document.getElementById('editCustomOffice');
+      
+      if (allOfficeOptions.includes(req.office)) {
+        officeSelect.value = req.office;
+        customOfficeContainer.classList.add('hidden');
+        customOfficeInput.value = '';
+        customOfficeInput.required = false;
+      } else {
+        // It's a custom office
+        officeSelect.value = 'Other';
+        customOfficeContainer.classList.remove('hidden');
+        customOfficeInput.value = req.office;
+        customOfficeInput.required = true;
+      }
+      
+      // Clear old date errors
+      document.getElementById('editDateError').classList.add('hidden');
+      
+      showModal('editModal');
+    }
+    
+    function handleEditOfficeChange() {
+      const office = document.getElementById('editOffice').value;
+      const customOfficeContainer = document.getElementById('editCustomOfficeContainer');
+      const customOffice = document.getElementById('editCustomOffice');
+      
+      if (office === 'Other') {
+        customOfficeContainer.classList.remove('hidden');
+        customOffice.required = true;
+      } else {
+        customOfficeContainer.classList.add('hidden');
+        customOffice.required = false;
+        customOffice.value = '';
+      }
+    }
+    
+    function validateEditDates() {
+      const startDate = document.getElementById('editStartDate').value;
+      const endDate = document.getElementById('editEndDate').value;
+      const dateError = document.getElementById('editDateError');
+      const submitBtn = document.getElementById('editSubmitBtn');
+      
+      // **NEW:** Get max date from timestamp
+      const requestDate = new Date(document.getElementById('editTimestamp').value);
+      
+      let errorMsg = '';
+      
+      if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
+        errorMsg = 'End date cannot be earlier than start date.';
+      } else if (new Date(endDate) > requestDate) {
+        // **NEW:** Check against request date
+         errorMsg = 'End date cannot be later than the request date.';
+      } else if (new Date(startDate) > requestDate) {
+         // **NEW:** Check start date too
+         errorMsg = 'Start date cannot be later than the request date.';
+      }
+      
+      if (errorMsg) {
+        dateError.textContent = errorMsg;
+        dateError.classList.remove('hidden');
+        submitBtn.disabled = true;
+        return false;
+      }
+      
+      dateError.classList.add('hidden');
+      submitBtn.disabled = false;
+      return true;
+    }
+    
+    function handleUpdateRequest(event) {
+      event.preventDefault();
+      
+      // Final validation check
+      if (!validateEditDates()) return;
+      
+      const form = event.target;
+      const officeValue = form.office.value === 'Other' 
+        ? form.customOffice.value.trim().toUpperCase() 
+        : form.office.value;
+      
+      const updateData = {
+        rowNumber: form.rowNumber.value,
+        lastName: form.lastName.value.trim().toUpperCase(),
+        firstName: form.firstName.value.trim().toUpperCase(),
+        middleInitial: form.middleInitial.value.trim().toUpperCase(),
+        suffix: form.suffix.value.trim().toUpperCase(),
+        position: form.position.value.trim().toUpperCase(),
+        office: officeValue,
+        startDate: form.startDate.value,
+        endDate: form.endDate.value,
+        purpose: form.purpose.value.trim().toUpperCase()
+      };
+      
+      showLoading('Updating request...');
+      closeModal('editModal');
+      
+      google.script.run
+        .withSuccessHandler(function(response) {
+          hideLoading();
+          if (response.success) {
+            showSuccessModal(response.message);
+            loadPendingRequests(); // Refresh the list
+          } else {
+            showErrorModal(response.message);
+          }
+        })
+        .withFailureHandler(handleAdminError)
+        .updatePendingRequest(updateData);
+    }
+
+    // --- Settings Functions ---
+    
     function loadSignatory() {
-  google.script.run
-    .withSuccessHandler(function(signatory) {
-      document.getElementById('signatoryName').value = signatory.name;
-      document.getElementById('signatoryPosition').value = signatory.position;
-    })
-    .withFailureHandler(handleAdminError)
-    .getSignatory();  // <-- This line MUST be here!
-}
+      google.script.run
+        .withSuccessHandler(function(signatory) {
+          document.getElementById('signatoryName').value = signatory.name;
+          document.getElementById('signatoryPosition').value = signatory.position;
+        })
+        .withFailureHandler(handleAdminError)
+        .getSignatory();
+    }
     
     function handleSignatoryUpdate(event) {
       event.preventDefault();
@@ -457,9 +1042,85 @@
             messageDiv.classList.add('hidden');
           }, 3000);
         })
-        .withFailureHandler(handleAdminError) // Added failure handler
+        .withFailureHandler(handleAdminError)
         .updateSignatory(name, position);
     }
+    
+    // --- Search Filter Functions ---
+    
+    function filterPendingRequests() {
+      const searchTerm = document.getElementById('searchInput').value.toUpperCase();
+      const requestsContainer = document.getElementById('pendingRequests');
+      const cards = requestsContainer.querySelectorAll('.request-card');
+      let foundRequest = false;
+
+      cards.forEach(card => {
+        const cardText = card.textContent || card.innerText;
+        if (cardText.toUpperCase().indexOf(searchTerm) > -1) {
+          card.style.display = '';
+          foundRequest = true;
+        } else {
+          card.style.display = 'none';
+        }
+      });
+      
+      // Handle 'no results' message
+      let noResultsMsg = requestsContainer.querySelector('#noSearchResults');
+      if (noResultsMsg) {
+        noResultsMsg.remove();
+      }
+      
+      const noPendingMsg = requestsContainer.querySelector('#noPendingRequests');
+
+      if (!foundRequest && cards.length > 0) {
+        noResultsMsg = document.createElement('p');
+        noResultsMsg.id = 'noSearchResults';
+        noResultsMsg.className = 'text-gray-500 text-center py-8';
+        noResultsMsg.textContent = 'No requests found matching your search.';
+        requestsContainer.appendChild(noResultsMsg);
+        if(noPendingMsg) noPendingMsg.style.display = 'none'; // Hide original 'no pending'
+      } else if (noPendingMsg) {
+         noPendingMsg.style.display = (cards.length === 0) ? 'block' : 'none';
+      }
+    }
+    
+    function filterApprovedRequests() {
+      const searchTerm = document.getElementById('approvedSearchInput').value.toUpperCase();
+      const requestsContainer = document.getElementById('approvedRequests');
+      const cards = requestsContainer.querySelectorAll('.request-card');
+      let foundRequest = false;
+
+      cards.forEach(card => {
+        const cardText = card.textContent || card.innerText;
+        if (cardText.toUpperCase().indexOf(searchTerm) > -1) {
+          card.style.display = '';
+          foundRequest = true;
+        } else {
+          card.style.display = 'none';
+        }
+      });
+      
+      // Handle 'no results' message
+      let noResultsMsg = requestsContainer.querySelector('#noApprovedSearchResults');
+      if (noResultsMsg) {
+        noResultsMsg.remove();
+      }
+      
+      const noApprovedMsg = requestsContainer.querySelector('#noApprovedRequests');
+
+      if (!foundRequest && cards.length > 0) {
+        noResultsMsg = document.createElement('p');
+        noResultsMsg.id = 'noApprovedSearchResults';
+        noResultsMsg.className = 'text-gray-500 text-center py-8';
+        noResultsMsg.textContent = 'No approved requests found matching your search.';
+        requestsContainer.appendChild(noResultsMsg);
+        if(noApprovedMsg) noApprovedMsg.style.display = 'none'; // Hide original 'no approved'
+      } else if (noApprovedMsg) {
+         noApprovedMsg.style.display = (cards.length === 0) ? 'block' : 'none';
+      }
+    }
+
   </script>
 </body>
 </html>
+

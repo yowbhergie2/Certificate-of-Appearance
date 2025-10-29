@@ -164,41 +164,41 @@ function getDashboardStats() {
   }
 }
 
-/**
- * Gets all pending requests
- */
 function getPendingRequests() {
+  Logger.log('getPendingRequests called');
   try {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
-
-    // Check if sheet exists
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('Requests');
+    
     if (!sheet) {
       Logger.log('ERROR: Requests sheet not found');
       return [];
     }
 
     const data = sheet.getDataRange().getValues();
+    Logger.log('Data rows: ' + data.length);
 
-    // Check if data exists and has more than just headers
     if (!data || data.length <= 1) {
-      Logger.log('No data in Requests sheet');
+      Logger.log('No data in sheet');
       return [];
     }
 
     const requests = [];
 
     for (let i = 1; i < data.length; i++) {
-      if (data[i][13] === 'Pending') { // Column N: Status
+      const status = data[i][13]; // Column N
+      
+      if (status === 'Pending') {
         // Convert timestamp to string to avoid serialization issues
         const timestamp = data[i][0];
-        const timestampStr = timestamp ?
+        const timestampStr = timestamp ? 
           (timestamp instanceof Date ? timestamp.toISOString() : String(timestamp)) : '';
-
+        
         // Convert inclusiveDates to string
         const inclusiveDates = data[i][11];
-        const inclusiveDatesStr = inclusiveDates ?
+        const inclusiveDatesStr = inclusiveDates ? 
           (inclusiveDates instanceof Date ? Utilities.formatDate(inclusiveDates, Session.getScriptTimeZone(), 'MMM dd, yyyy') : String(inclusiveDates)) : '';
-
+        
         requests.push({
           rowNumber: i + 1,
           registrationNo: String(data[i][1] || ''),
@@ -213,10 +213,10 @@ function getPendingRequests() {
       }
     }
 
-    Logger.log('Returning ' + requests.length + ' pending requests');
-    return requests.reverse(); // Show newest first
+    Logger.log('Returning ' + requests.length + ' requests');
+    return requests.reverse();
   } catch (error) {
-    Logger.log('Error fetching pending requests: ' + error.toString());
+    Logger.log('ERROR: ' + error.toString());
     return [];
   }
 }
@@ -230,7 +230,7 @@ function getApprovedRequests() {
 
     // Check if sheet exists
     if (!sheet) {
-      Logger.log('ERROR: Requests sheet not found');
+      console.error('Requests sheet not found');
       return [];
     }
 
@@ -238,7 +238,7 @@ function getApprovedRequests() {
 
     // Check if data exists and has more than just headers
     if (!data || data.length <= 1) {
-      Logger.log('No data in Requests sheet');
+      console.log('No data in Requests sheet');
       return [];
     }
 
@@ -246,69 +246,25 @@ function getApprovedRequests() {
 
     for (let i = 1; i < data.length; i++) {
       if (data[i][13] === 'Approved') { // Column N: Status
-        // Convert dates to strings to avoid serialization issues
-        const inclusiveDates = data[i][11];
-        const inclusiveDatesStr = inclusiveDates ?
-          (inclusiveDates instanceof Date ? Utilities.formatDate(inclusiveDates, Session.getScriptTimeZone(), 'MMM dd, yyyy') : String(inclusiveDates)) : '';
-
-        const issueDate = data[i][16];
-        const issueDateStr = issueDate ?
-          (issueDate instanceof Date ? Utilities.formatDate(issueDate, Session.getScriptTimeZone(), 'MMM dd, yyyy') : String(issueDate)) : '';
-
         requests.push({
           rowNumber: i + 1,
-          registrationNo: String(data[i][1] || ''),
-          displayName: String(data[i][2] || ''),
-          position: String(data[i][7] || ''),
-          office: String(data[i][8] || ''),
-          inclusiveDates: inclusiveDatesStr,
-          purpose: String(data[i][12] || ''),
-          approvedBy: String(data[i][15] || ''),
-          issueDate: issueDateStr,
-          pdfUrl: String(data[i][19] || '')
+          registrationNo: data[i][1],
+          displayName: data[i][2],
+          position: data[i][7],
+          office: data[i][8],
+          inclusiveDates: data[i][11],
+          purpose: data[i][12],
+          approvedBy: data[i][15],
+          issueDate: data[i][16],
+          pdfUrl: data[i][19]
         });
       }
     }
 
-    Logger.log('Returning ' + requests.length + ' approved requests');
     return requests.reverse().slice(0, 20); // Show 20 most recent
   } catch (error) {
-    Logger.log('Error fetching approved requests: ' + error.toString());
+    console.error('Error fetching approved requests:', error);
     return [];
-  }
-}
-
-/**
- * Updates a pending request
- */
-function updateRequest(rowNumber, displayName, position, office, inclusiveDates, purpose) {
-  try {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
-
-    if (!sheet) {
-      return {
-        success: false,
-        message: 'Requests sheet not found'
-      };
-    }
-
-    // Update the row with new values
-    sheet.getRange(rowNumber, 3).setValue(displayName);   // Column C: DisplayName
-    sheet.getRange(rowNumber, 8).setValue(position);      // Column H: Position
-    sheet.getRange(rowNumber, 9).setValue(office);        // Column I: Office
-    sheet.getRange(rowNumber, 12).setValue(inclusiveDates); // Column L: InclusiveDates
-    sheet.getRange(rowNumber, 13).setValue(purpose);      // Column M: Purpose
-
-    return {
-      success: true,
-      message: 'Request updated successfully!'
-    };
-  } catch (error) {
-    Logger.log('Error updating request: ' + error);
-    return {
-      success: false,
-      message: 'Error: ' + error.toString()
-    };
   }
 }
 
@@ -581,4 +537,12 @@ function initializeDatabase() {
   signatoriesSheet.getRange(2, 1, 1, 2).setValues([['John Doe', 'Director, RMS']]);
   
   SpreadsheetApp.getUi().alert('Database initialized successfully!');
+}
+
+function testGetPendingRequests() {
+  var result = getPendingRequests();
+  Logger.log('Test result type: ' + typeof result);
+  Logger.log('Test result value: ' + JSON.stringify(result));
+  Logger.log('Test result length: ' + (result ? result.length : 'null'));
+  return result;
 }

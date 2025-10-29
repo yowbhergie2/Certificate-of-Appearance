@@ -4,6 +4,10 @@
   <base target="_top">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    /* Added Tahoma font */
+    body {
+      font-family: "Tahoma", sans-serif;
+    }
     .tab-active {
       background-color: #3b82f6;
       color: white;
@@ -167,6 +171,13 @@
       loadDashboard();
       loadSignatory();
     };
+
+    // Helper function to handle all server errors
+    function handleAdminError(error) {
+      hideLoading();
+      alert('An error occurred: ' + error.message);
+      console.error('Apps Script Error:', error);
+    }
     
     function switchTab(tabName) {
       // Hide all content
@@ -211,34 +222,37 @@
       showLoading('Loading dashboard...');
       google.script.run
         .withSuccessHandler(function(stats) {
-          document.getElementById('stat-pending').textContent = stats.totalPending;
-          document.getElementById('stat-approved').textContent = stats.totalApproved;
-          document.getElementById('stat-rejected').textContent = stats.totalRejected;
-          document.getElementById('pendingCount').textContent = stats.totalPending;
-          
-          const topOfficesDiv = document.getElementById('topOffices');
-          topOfficesDiv.innerHTML = '';
-          
-          if (stats.topOffices.length === 0) {
-            topOfficesDiv.innerHTML = '<p class="text-gray-500">No data available</p>';
-          } else {
-            stats.topOffices.forEach(item => {
-              const div = document.createElement('div');
-              div.className = 'flex items-center justify-between bg-gray-50 p-3 rounded';
-              div.innerHTML = `
-                <span class="text-gray-700">${item.office}</span>
-                <span class="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded">${item.count}</span>
-              `;
-              topOfficesDiv.appendChild(div);
-            });
+          try {
+            document.getElementById('stat-pending').textContent = stats.totalPending;
+            document.getElementById('stat-approved').textContent = stats.totalApproved;
+            document.getElementById('stat-rejected').textContent = stats.totalRejected;
+            document.getElementById('pendingCount').textContent = stats.totalPending;
+            
+            const topOfficesDiv = document.getElementById('topOffices');
+            topOfficesDiv.innerHTML = '';
+            
+            // FIX: Check if stats.topOffices is null or empty
+            if (!stats.topOffices || stats.topOffices.length === 0) {
+              topOfficesDiv.innerHTML = '<p class="text-gray-500">No data available</p>';
+            } else {
+              stats.topOffices.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between bg-gray-50 p-3 rounded';
+                div.innerHTML = `
+                  <span class="text-gray-700">${item.office}</span>
+                  <span class="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded">${item.count}</span>
+                `;
+                topOfficesDiv.appendChild(div);
+              });
+            }
+          } catch (e) {
+            console.error('Error rendering dashboard:', e);
+            alert('A client-side error occurred while displaying dashboard: ' + e.message);
+          } finally {
+            hideLoading();
           }
-          
-          hideLoading();
         })
-        .withFailureHandler(function(error) {
-          hideLoading();
-          alert('Error loading dashboard: ' + error);
-        })
+        .withFailureHandler(handleAdminError) // Added failure handler
         .getDashboardStats();
     }
     
@@ -246,24 +260,27 @@
       showLoading('Loading pending requests...');
       google.script.run
         .withSuccessHandler(function(requests) {
-          const container = document.getElementById('pendingRequests');
-          container.innerHTML = '';
-          
-          if (requests.length === 0) {
-            container.innerHTML = '<p class="text-gray-500 text-center py-8">No pending requests</p>';
-          } else {
-            requests.forEach(req => {
-              const card = createRequestCard(req, 'pending');
-              container.appendChild(card);
-            });
+          try {
+            const container = document.getElementById('pendingRequests');
+            container.innerHTML = '';
+            
+            // FIX: Check if requests is null or empty
+            if (!requests || requests.length === 0) {
+              container.innerHTML = '<p class="text-gray-500 text-center py-8">No pending requests</p>';
+            } else {
+              requests.forEach(req => {
+                const card = createRequestCard(req, 'pending');
+                container.appendChild(card);
+              });
+            }
+          } catch (e) {
+            console.error('Error rendering pending requests:', e);
+            alert('A client-side error occurred while displaying requests: ' + e.message);
+          } finally {
+            hideLoading();
           }
-          
-          hideLoading();
         })
-        .withFailureHandler(function(error) {
-          hideLoading();
-          alert('Error loading pending requests: ' + error);
-        })
+        .withFailureHandler(handleAdminError) // Added failure handler
         .getPendingRequests();
     }
     
@@ -271,24 +288,27 @@
       showLoading('Loading approved requests...');
       google.script.run
         .withSuccessHandler(function(requests) {
-          const container = document.getElementById('approvedRequests');
-          container.innerHTML = '';
-          
-          if (requests.length === 0) {
-            container.innerHTML = '<p class="text-gray-500 text-center py-8">No approved requests</p>';
-          } else {
-            requests.forEach(req => {
-              const card = createRequestCard(req, 'approved');
-              container.appendChild(card);
-            });
+          try {
+            const container = document.getElementById('approvedRequests');
+            container.innerHTML = '';
+            
+            // FIX: Check if requests is null or empty
+            if (!requests || requests.length === 0) {
+              container.innerHTML = '<p class="text-gray-500 text-center py-8">No approved requests</p>';
+            } else {
+              requests.forEach(req => {
+                const card = createRequestCard(req, 'approved');
+                container.appendChild(card);
+              });
+            }
+          } catch (e) {
+            console.error('Error rendering approved requests:', e);
+            alert('A client-side error occurred while displaying requests: ' + e.message);
+          } finally {
+            hideLoading();
           }
-          
-          hideLoading();
         })
-        .withFailureHandler(function(error) {
-          hideLoading();
-          alert('Error loading approved requests: ' + error);
-        })
+        .withFailureHandler(handleAdminError) // Added failure handler
         .getApprovedRequests();
     }
     
@@ -361,10 +381,7 @@
             alert(response.message);
           }
         })
-        .withFailureHandler(function(error) {
-          hideLoading();
-          alert('Error: ' + error);
-        })
+        .withFailureHandler(handleAdminError) // Added failure handler
         .approveRequest(rowNumber, regNo);
     }
     
@@ -383,10 +400,7 @@
             alert(response.message);
           }
         })
-        .withFailureHandler(function(error) {
-          hideLoading();
-          alert('Error: ' + error);
-        })
+        .withFailureHandler(handleAdminError) // Added failure handler
         .rejectRequest(rowNumber);
     }
     
@@ -405,10 +419,7 @@
             alert(response.message);
           }
         })
-        .withFailureHandler(function(error) {
-          hideLoading();
-          alert('Error: ' + error);
-        })
+        .withFailureHandler(handleAdminError) // Added failure handler
         .generateCertificate(regNo);
     }
     
@@ -418,7 +429,7 @@
           document.getElementById('signatoryName').value = signatory.name;
           document.getElementById('signatoryPosition').value = signatory.position;
         })
-        .getSignatory();
+        .withFailureHandler(handleAdminError); // Added failure handler
     }
     
     function handleSignatoryUpdate(event) {
@@ -442,12 +453,10 @@
             messageDiv.classList.add('hidden');
           }, 3000);
         })
-        .withFailureHandler(function(error) {
-          hideLoading();
-          alert('Error: ' + error);
-        })
+        .withFailureHandler(handleAdminError) // Added failure handler
         .updateSignatory(name, position);
     }
   </script>
 </body>
 </html>
+

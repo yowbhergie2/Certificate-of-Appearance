@@ -46,7 +46,12 @@
     .uppercase-input::placeholder {
       text-transform: none;
     }
-    
+
+    /* Capitalize input - will be handled by JavaScript for smart capitalization */
+    .capitalize-input {
+      /* No CSS transform, handled by JS to preserve Roman numerals */
+    }
+
   </style>
 </head>
 <body class="p-6">
@@ -120,8 +125,9 @@
         <div class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Position <span class="text-red-500">*</span></label>
-            <input type="text" id="position" name="position" required 
-                   class="w-full px-3 py-2 border border-gray-300 rounded-lg uppercase-input">
+            <input type="text" id="position" name="position" required
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg capitalize-input"
+                   oninput="smartCapitalize(this)">
           </div>
           
           <div>
@@ -169,7 +175,7 @@
       <div class="mb-6 bg-blue-50 p-4 rounded-xl border border-blue-200">
         <label class="block text-sm font-medium text-gray-700 mb-1">Purpose <span class="text-red-500">*</span></label>
         <input type="text" id="purpose" name="purpose" list="purposeSuggestions" required
-               class="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2 uppercase-input">
+               class="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2">
         <datalist id="purposeSuggestions"></datalist>
       </div>
       
@@ -234,17 +240,52 @@
   </div>
   
   <script>
+    /**
+     * Smart capitalize function that capitalizes each word but preserves Roman numerals
+     * Example: "administrative officer ii" becomes "Administrative Officer II"
+     */
+    function smartCapitalize(input) {
+      const cursorPos = input.selectionStart;
+      const romanNumerals = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+
+      let value = input.value;
+
+      // Split into words
+      let words = value.split(' ');
+
+      // Capitalize each word
+      words = words.map(word => {
+        const upperWord = word.toUpperCase();
+
+        // Check if it's a Roman numeral
+        if (romanNumerals.includes(upperWord)) {
+          return upperWord;
+        }
+
+        // Otherwise capitalize first letter only
+        if (word.length > 0) {
+          return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+        }
+        return word;
+      });
+
+      input.value = words.join(' ');
+
+      // Restore cursor position
+      input.setSelectionRange(cursorPos, cursorPos);
+    }
+
     // Set max date to today for date inputs
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('startDate').setAttribute('max', today);
     document.getElementById('endDate').setAttribute('max', today);
-    
+
     // Load offices on page load
     google.script.run
       .withSuccessHandler(populateOffices)
       .withFailureHandler(handleError)
       .getOffices();
-    
+
     // Load purpose suggestions from localStorage
     loadPurposeSuggestions();
     
@@ -334,17 +375,17 @@
         firstName: document.getElementById('firstName').value.trim().toUpperCase(),
         middleInitial: document.getElementById('middleInitial').value.trim().toUpperCase(),
         suffix: document.getElementById('suffix').value.trim().toUpperCase(),
-        position: document.getElementById('position').value.trim().toUpperCase(),
-        office: document.getElementById('office').value === 'Other' 
-                ? document.getElementById('customOffice').value.trim().toUpperCase() 
+        position: document.getElementById('position').value.trim(), // Keep as-is, already smart capitalized
+        office: document.getElementById('office').value === 'Other'
+                ? document.getElementById('customOffice').value.trim().toUpperCase()
                 : document.getElementById('office').value,
         startDate: document.getElementById('startDate').value,
         endDate: document.getElementById('endDate').value,
-        purpose: document.getElementById('purpose').value.trim().toUpperCase()
+        purpose: document.getElementById('purpose').value.trim() // Don't force uppercase
       };
-      
-      // Save purpose to localStorage (in uppercase)
-      savePurposeToLocalStorage(document.getElementById('purpose').value.trim().toUpperCase());
+
+      // Save purpose to localStorage (keep original case)
+      savePurposeToLocalStorage(document.getElementById('purpose').value.trim());
       
       // Show loading overlay
       document.getElementById('loadingOverlay').classList.remove('hidden');

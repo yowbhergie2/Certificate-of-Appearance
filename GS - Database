@@ -471,7 +471,8 @@ function generateCertificate(regNo) {
           displayName: data[i][2],
           position: data[i][7],
           office: data[i][8],
-          inclusiveDates: data[i][11], // Use pre-formatted
+          startDate: data[i][9],
+          endDate: data[i][10],
           purpose: data[i][12],
           regNo: data[i][1],
           issueDate: data[i][16]
@@ -484,6 +485,12 @@ function generateCertificate(regNo) {
     if (!requestData) {
       throw new Error('Request not found or not approved');
     }
+
+    // Format inclusive dates properly from start and end dates
+    const inclusiveDates = formatInclusiveDates(
+      formatDateForInput(new Date(requestData.startDate)),
+      formatDateForInput(new Date(requestData.endDate))
+    );
 
     // Get signatory data
     const signatorySheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Signatories');
@@ -510,7 +517,7 @@ function generateCertificate(regNo) {
     body.replaceText('{{Position}}', requestData.position);
     body.replaceText('{{Office}}', requestData.office);
     body.replaceText('{{Purpose}}', requestData.purpose);
-    body.replaceText('{{InclusiveDates}}', requestData.inclusiveDates);
+    body.replaceText('{{InclusiveDates}}', inclusiveDates);
     body.replaceText('{{RegNo}}', requestData.regNo);
     body.replaceText('{{SignatoryName}}', signatoryName);
     body.replaceText('{{SignatoryPosition}}', signatoryPosition);

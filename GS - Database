@@ -106,12 +106,6 @@ function getDashboardStats() {
     const officeCounts = {};
 
     for (let i = 1; i < data.length; i++) {
-      const status = normalizeStatus(data[i][13]); // Column N: Status
-      const office = normalizeText(data[i][8]);    // Column I: Office
-
-      if (status === 'pending') totalPending++;
-      if (status === 'approved') totalApproved++;
-      if (status === 'rejected') totalRejected++;
       const status = data[i][13]; // Column N: Status
       const office = data[i][8];  // Column I: Office
 
@@ -157,16 +151,6 @@ function getPendingRequests() {
     const requests = [];
 
     for (let i = 1; i < data.length; i++) {
-      if (normalizeStatus(data[i][13]) === 'pending') { // Column N: Status
-        requests.push({
-          rowNumber: i + 1,
-          registrationNo: normalizeText(data[i][1]),
-          displayName: normalizeText(data[i][2]),
-          position: normalizeText(data[i][7]),
-          office: normalizeText(data[i][8]),
-          inclusiveDates: normalizeText(data[i][11]),
-          purpose: normalizeText(data[i][12]),
-          submittedBy: normalizeText(data[i][14]),
       if (data[i][13] === 'Pending') { // Column N: Status
         requests.push({
           rowNumber: i + 1,
@@ -199,18 +183,6 @@ function getApprovedRequests() {
     const requests = [];
 
     for (let i = 1; i < data.length; i++) {
-      if (normalizeStatus(data[i][13]) === 'approved') { // Column N: Status
-        requests.push({
-          rowNumber: i + 1,
-          registrationNo: normalizeText(data[i][1]),
-          displayName: normalizeText(data[i][2]),
-          position: normalizeText(data[i][7]),
-          office: normalizeText(data[i][8]),
-          inclusiveDates: normalizeText(data[i][11]),
-          purpose: normalizeText(data[i][12]),
-          approvedBy: normalizeText(data[i][15]),
-          issueDate: data[i][16],
-          pdfUrl: normalizeText(data[i][19])
       if (data[i][13] === 'Approved') { // Column N: Status
         requests.push({
           rowNumber: i + 1,

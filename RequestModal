@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Set Tahoma as the default font */
+    body {
+      font-family: "Tahoma", sans-serif;
+      margin: 0;
+      padding: 0;
+      /* Set a gradient background */
+      background-color: #f3f4f6; /* Fallback */
+      background-image: linear-gradient(to bottom right, #f3f4f6, #dbeafe); /* from-gray-100 to-blue-100 */
+    }
+    
+    .spinner {
+      border: 3px solid #f3f3f3;
+      /* Spinner color set to blue */
+      border-top: 3px solid #2563eb; /* blue-600 */
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Custom focus styles for orange accent */
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #f97316; /* orange-500 */
+      box-shadow: 0 0 0 2px #fbbf24; /* ring-orange-300 */
+    }
+    
+  </style>
+</head>
+<body class="p-6">
+  <!-- Main Form Container -->
+  <!-- Rounded-2xl and Shadow-2xl for a 'floating' card effect -->
+  <div id="formContainer" class="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-2xl mx-auto">
+    
+    <!-- TITLE: Changed gradient to Blue theme and updated text -->
+    <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-700 mb-2 text-center">
+      Request for Certificate of Appearance
+    </h2>
+    
+    <!-- SUBTITLE: Added as per request -->
+    <p class="text-lg font-medium text-gray-600 text-center mb-8">
+      DPWH - REGIONAL OFFICE II
+    </p>
+    
+    <form id="requestForm" onsubmit="handleSubmit(event)">
+      
+      <!-- Name Section -->
+      <!-- Changed to blue-50 background, rounded-xl, and softer border -->
+      <div class="mb-6 bg-blue-50 p-4 rounded-xl border border-blue-200">
+        <div class="flex items-center mb-3">
+          <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+          </svg>
+          <h3 class="text-lg font-semibold text-gray-700">Personal Information</h3>
+        </div>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Last Name <span class="text-red-500">*</span></label>
+            <input type="text" id="lastName" name="lastName" required 
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">First Name <span class="text-red-500">*</span></label>
+            <input type="text" id="firstName" name="firstName" required 
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Middle Initial</label>
+            <input type="text" id="middleInitial" name="middleInitial" maxlength="2"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Suffix</label>
+            <input type="text" id="suffix" name="suffix" placeholder="Jr., Sr., III, etc."
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+          </div>
+        </div>
+      </div>
+      
+      <!-- Work Details Section -->
+      <div class="mb-6 bg-blue-50 p-4 rounded-xl border border-blue-200">
+        <div class="flex items-center mb-3">
+          <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+          </svg>
+          <h3 class="text-lg font-semibold text-gray-700">Work Details</h3>
+        </div>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Position <span class="text-red-500">*</span></label>
+            <input type="text" id="position" name="position" required 
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Office <span class="text-red-500">*</span></label>
+            <select id="office" name="office" required onchange="handleOfficeChange()"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white">
+              <option value="">-- Select Office --</option>
+            </select>
+          </div>
+          
+          <div id="customOfficeContainer" class="hidden">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Specify Office <span class="text-red-500">*</span></label>
+            <input type="text" id="customOffice" name="customOffice"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+          </div>
+        </div>
+      </div>
+      
+      <!-- Dates Section -->
+      <div class="mb-6 bg-blue-50 p-4 rounded-xl border border-blue-200">
+        <div class="flex items-center mb-3">
+          <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          </svg>
+          <h3 class="text-lg font-semibold text-gray-700">Period of Appearance</h3>
+        </div>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Start Date <span class="text-red-500">*</span></label>
+            <input type="date" id="startDate" name="startDate" required onchange="validateDates()"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">End Date <span class="text-red-500">*</span></label>
+            <input type="date" id="endDate" name="endDate" required onchange="validateDates()"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+          </div>
+        </div>
+        <p id="dateError" class="text-red-500 text-sm mt-2 hidden"></p>
+      </div>
+      
+      <!-- Purpose Section -->
+      <div class="mb-6 bg-blue-50 p-4 rounded-xl border border-blue-200">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Purpose <span class="text-red-500">*</span></label>
+        <input type="text" id="purpose" name="purpose" list="purposeSuggestions" required
+               class="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2">
+        <datalist id="purposeSuggestions"></datalist>
+        <textarea id="purposeDetail" name="purposeDetail" rows="3" placeholder="Additional details (optional)"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg"></textarea>
+      </div>
+      
+      <!-- Terms & Conditions -->
+      <div class="mb-6 bg-blue-50 p-4 rounded-xl border border-blue-200">
+        <div class="flex items-start">
+          <input type="checkbox" id="terms" name="terms" required
+                 class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+          <label for="terms" class="ml-3 text-sm text-gray-700" style="text-align: justify;">
+            I understand that in case of <strong>loss of this Certificate</strong> and in order to secure a <strong>second copy</strong>, 
+            please submit a <strong>written request supported by a duly notarized Affidavit of Loss</strong> to this Office 
+            <strong>within five (5) calendar days after date of loss</strong>.
+          </label>
+        </div>
+      </div>
+      
+      <!-- Error Message -->
+      <div id="errorMessage" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+        <p class="font-medium">Error</p>
+        <p id="errorText" class="text-sm"></p>
+      </div>
+      
+      <!-- Submit Button -->
+      <div class="flex justify-end space-x-3">
+        <!-- CANCEL BTN: Changed onclick to call handleCancel() -->
+        <button type="button" onclick="handleCancel()" 
+                class="px-6 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 font-medium hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-all duration-200 shadow-sm">
+          Cancel
+        </button>
+        <!-- SUBMIT BTN: Added gradient and shadow -->
+        <button type="submit" id="submitBtn"
+                class="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-medium rounded-lg hover:from-blue-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-md hover:shadow-lg transition-all duration-200">
+          Submit Request
+        </button>
+      </div>
+    </form>
+  </div>
+  
+  <!-- Loading Overlay -->
+  <!-- Added backdrop blur -->
+  <div id="loadingOverlay" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-xl shadow-2xl text-center">
+      <div class="spinner mx-auto mb-4"></div>
+      <p class="text-gray-700 font-medium">Submitting your request...</p>
+    </div>
+  </div>
+  
+  <!-- Success Modal -->
+  <div id="successModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
+    <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md mx-4">
+      <div class="text-center">
+        <svg class="w-16 h-16 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <h3 class="text-xl font-bold text-gray-800 mb-2">Request Submitted!</h3>
+        <p id="successMessage" class="text-gray-600 mb-6"></p>
+        <button onclick="closeSuccessModal()" 
+                class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+          OK
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Set max date to today for date inputs
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('startDate').setAttribute('max', today);
+    document.getElementById('endDate').setAttribute('max', today);
+    
+    // Load offices on page load
+    google.script.run
+      .withSuccessHandler(populateOffices)
+      .withFailureHandler(handleError)
+      .getOffices();
+    
+    // Load purpose suggestions from localStorage
+    loadPurposeSuggestions();
+    
+    function populateOffices(offices) {
+      const select = document.getElementById('office');
+      offices.forEach(office => {
+        const option = document.createElement('option');
+        option.value = office;
+        option.textContent = office;
+        select.appendChild(option);
+      });
+      
+      // Add "Other" option
+      const otherOption = document.createElement('option');
+      otherOption.value = 'Other';
+      otherOption.textContent = 'Other (Specify)';
+      select.appendChild(otherOption);
+    }
+    
+    function handleOfficeChange() {
+      const office = document.getElementById('office').value;
+      const customOfficeContainer = document.getElementById('customOfficeContainer');
+      const customOffice = document.getElementById('customOffice');
+      
+      if (office === 'Other') {
+        customOfficeContainer.classList.remove('hidden');
+        customOffice.required = true;
+      } else {
+        customOfficeContainer.classList.add('hidden');
+        customOffice.required = false;
+        customOffice.value = '';
+      }
+    }
+    
+    function validateDates() {
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+      const dateError = document.getElementById('dateError');
+      
+      if (startDate && endDate) {
+        if (new Date(endDate) < new Date(startDate)) {
+          dateError.textContent = 'End date cannot be earlier than start date.';
+          dateError.classList.remove('hidden');
+          document.getElementById('endDate').setCustomValidity('Invalid date range');
+        } else {
+          dateError.classList.add('hidden');
+          document.getElementById('endDate').setCustomValidity('');
+        }
+      }
+    }
+    
+    function loadPurposeSuggestions() {
+      const purposes = JSON.parse(localStorage.getItem('caPurposes') || '[]');
+      const datalist = document.getElementById('purposeSuggestions');
+      
+      purposes.forEach(purpose => {
+        const option = document.createElement('option');
+        option.value = purpose;
+        datalist.appendChild(option);
+      });
+    }
+    
+    function savePurposeToLocalStorage(purpose) {
+      let purposes = JSON.parse(localStorage.getItem('caPurposes') || '[]');
+      
+      // Remove if already exists
+      purposes = purposes.filter(p => p !== purpose);
+      
+      // Add to beginning
+      purposes.unshift(purpose);
+      
+      // Keep only last 10
+      purposes = purposes.slice(0, 10);
+      
+      localStorage.setItem('caPurposes', JSON.stringify(purposes));
+    }
+    
+    function handleSubmit(event) {
+      event.preventDefault();
+      
+      // Hide any previous error
+      document.getElementById('errorMessage').classList.add('hidden');
+      
+      // Get form data
+      const formData = {
+        lastName: document.getElementById('lastName').value.trim(),
+        firstName: document.getElementById('firstName').value.trim(),
+        middleInitial: document.getElementById('middleInitial').value.trim(),
+        suffix: document.getElementById('suffix').value.trim(),
+        position: document.getElementById('position').value.trim(),
+        office: document.getElementById('office').value === 'Other' 
+                ? document.getElementById('customOffice').value.trim() 
+                : document.getElementById('office').value,
+        startDate: document.getElementById('startDate').value,
+        endDate: document.getElementById('endDate').value,
+        purpose: document.getElementById('purpose').value.trim() + 
+                 (document.getElementById('purposeDetail').value.trim() 
+                 ? '. ' + document.getElementById('purposeDetail').value.trim() 
+                 : '')
+      };
+      
+      // Save purpose to localStorage
+      savePurposeToLocalStorage(document.getElementById('purpose').value.trim());
+      
+      // Show loading overlay
+      document.getElementById('loadingOverlay').classList.remove('hidden');
+      
+      // Submit to server
+      google.script.run
+        .withSuccessHandler(handleSuccess)
+        .withFailureHandler(handleError)
+        .processRequestForm(formData);
+    }
+    
+    function handleSuccess(response) {
+      // Hide loading overlay
+      document.getElementById('loadingOverlay').classList.add('hidden');
+      
+      if (response.success) {
+        // Show success modal
+        document.getElementById('successMessage').textContent = response.message;
+        document.getElementById('successModal').classList.remove('hidden');
+        
+        // Reset form
+        document.getElementById('requestForm').reset();
+        document.getElementById('customOfficeContainer').classList.add('hidden');
+        
+        // Scroll to top
+        window.scrollTo(0, 0);
+      } else {
+        // Show error message
+        document.getElementById('errorText').textContent = response.message;
+        document.getElementById('errorMessage').classList.remove('hidden');
+        window.scrollTo(0, 0);
+      }
+    }
+    
+    function handleError(error) {
+      // Hide loading overlay
+      document.getElementById('loadingOverlay').classList.add('hidden');
+      
+      // Show error message
+      document.getElementById('errorText').textContent = 'An unexpected error occurred. Please try again.';
+      document.getElementById('errorMessage').classList.remove('hidden');
+      window.scrollTo(0, 0);
+      
+      console.error('Error:', error);
+    }
+    
+    function closeSuccessModal() {
+      document.getElementById('successModal').classList.add('hidden');
+    }
+
+    // Function to handle the cancel button click
+    function handleCancel() {
+      // 1. Reset the form fields
+      document.getElementById('requestForm').reset();
+      
+      // 2. Hide any special fields that might be open
+      document.getElementById('customOfficeContainer').classList.add('hidden');
+      
+      // 3. Hide any error messages
+      document.getElementById('errorMessage').classList.add('hidden');
+      document.getElementById('dateError').classList.add('hidden');
+      
+      // 4. Scroll to top smoothly
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
+  </script>
+</body>
+</html>
+

@@ -106,9 +106,8 @@ function processRequestForm(formData) {
       submittedBy,                  // O: SubmittedBy
       '',                           // P: ApprovedBy
       '',                           // Q: IssueDate
-      '',                           // R: QRCodeLink
-      '',                           // S: VerificationURL
-      ''                            // T: GeneratedPDF_URL
+      '',                           // R: VerificationURL
+      ''                            // S: GeneratedPDF_URL
     ];
     
     // Append to Requests sheet

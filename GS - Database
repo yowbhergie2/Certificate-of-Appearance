@@ -41,13 +41,13 @@ function showAdminPanel() {
 }
 
 /**
- * Shows the Web App URL for QR code verification
+ * Shows the Web App URL for verification
  */
 function showWebAppUrl() {
   const url = ScriptApp.getService().getUrl();
   const ui = SpreadsheetApp.getUi();
   ui.alert('Web App URL',
-           'Your QR code verification URL:\n\n' + url + '\n\n' +
+           'Your verification URL:\n\n' + url + '\n\n' +
            'Make sure the Web App is deployed as "Execute as: Me" and "Who has access: Anyone"',
            ui.ButtonSet.OK);
 }
@@ -93,6 +93,34 @@ function formatDateForInput(date) {
 }
 
 /**
+ * Helper function to get ordinal suffix for day (1st, 2nd, 3rd, etc.)
+ */
+function getOrdinalSuffix(day) {
+  if (day > 3 && day < 21) return 'th';
+  switch (day % 10) {
+    case 1: return 'st';
+    case 2: return 'nd';
+    case 3: return 'rd';
+    default: return 'th';
+  }
+}
+
+/**
+ * Formats date in ordinal format: "23rd day of October 2025"
+ */
+function formatDateOrdinal(date, timezone) {
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December'];
+
+  const dateObj = new Date(date);
+  const day = dateObj.getDate();
+  const month = monthNames[dateObj.getMonth()];
+  const year = dateObj.getFullYear();
+
+  return `${day}${getOrdinalSuffix(day)} day of ${month} ${year}`;
+}
+
+/**
  * Gets request data by registration number
  */
 function getRequestByRegNo(regNo) {
@@ -112,7 +140,7 @@ function getRequestByRegNo(regNo) {
         status: data[i][13],
         issueDate: data[i][16] ? new Date(data[i][16]).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A',
         approvedBy: data[i][15] || 'N/A',
-        pdfUrl: data[i][19] || null // Column T: GeneratedPDF_URL
+        pdfUrl: data[i][18] || null // Column S: GeneratedPDF_URL
       };
     }
   }
@@ -301,7 +329,7 @@ function getApprovedRequests() {
           purpose: data[i][12],
           approvedBy: data[i][15],
           issueDate: data[i][16] ? new Date(data[i][16]).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A',
-          pdfUrl: data[i][19]
+          pdfUrl: data[i][18]
         });
       }
     }
@@ -326,16 +354,11 @@ function approveRequest(rowNumber, regNo) {
     const webAppUrl = ScriptApp.getService().getUrl();
     const verificationUrl = webAppUrl + '?id=' + regNo;
 
-    // Generate QR code URL using an external API
-    const qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' +
-                      encodeURIComponent(verificationUrl);
-
     // Update the row
     sheet.getRange(rowNumber, 14).setValue('Approved'); // Column N: Status
     sheet.getRange(rowNumber, 16).setValue(approvedBy);  // Column P: ApprovedBy
     sheet.getRange(rowNumber, 17).setValue(issueDate);   // Column Q: IssueDate
-    sheet.getRange(rowNumber, 18).setValue(qrCodeUrl);   // Column R: QRCodeLink
-    sheet.getRange(rowNumber, 19).setValue(verificationUrl); // Column S: VerificationURL
+    sheet.getRange(rowNumber, 18).setValue(verificationUrl); // Column R: VerificationURL
 
     return {
       success: true,
@@ -395,8 +418,7 @@ function generateCertificate(regNo) {
           inclusiveDates: data[i][11], // Use pre-formatted
           purpose: data[i][12],
           regNo: data[i][1],
-          issueDate: data[i][16],
-          qrCodeLink: data[i][17]
+          issueDate: data[i][16]
         };
         rowNumber = i + 1;
         break;
@@ -413,10 +435,8 @@ function generateCertificate(regNo) {
     const signatoryName = signatoryData[0] || 'N/A';
     const signatoryPosition = signatoryData[1] || 'N/A';
 
-    // Format issue date
-    const issueDate = Utilities.formatDate(new Date(requestData.issueDate),
-                                          Session.getScriptTimeZone(),
-                                          'MMMM dd, yyyy');
+    // Format issue date in ordinal format: "23rd day of October 2025"
+    const issueDate = formatDateOrdinal(requestData.issueDate, Session.getScriptTimeZone());
 
     // Make a copy of the template
     const template = DriveApp.getFileById(GOOGLE_DOC_TEMPLATE_ID);
@@ -440,24 +460,8 @@ function generateCertificate(regNo) {
     body.replaceText('{{SignatoryPosition}}', signatoryPosition);
     body.replaceText('{{IssueDate}}', issueDate);
 
-    // Replace QR code placeholder with actual image
-    const qrCodeImageBlob = UrlFetchApp.fetch(requestData.qrCodeLink).getBlob();
-
-    // Find and replace {{QRCode}} placeholder
-    const searchResult = body.findText('{{QRCode}}');
-    if (searchResult) {
-      const element = searchResult.getElement();
-      const parent = element.getParent();
-      const childIndex = parent.getChildIndex(element);
-
-      // Remove the placeholder text
-      element.asText().setText('');
-
-      // Insert the image
-      if (parent.getType() === DocumentApp.ElementType.PARAGRAPH) {
-        parent.asParagraph().insertInlineImage(childIndex, qrCodeImageBlob);
-      }
-    }
+    // Remove QR code placeholder if it exists
+    body.replaceText('{{QRCode}}', '');
 
     // Save and close the document
     doc.saveAndClose();
@@ -516,7 +520,7 @@ function generateCertificate(regNo) {
     const pdfUrl = 'https://drive.google.com/uc?export=view&id=' + fileId; // New, more direct URL
 
     // Save PDF URL to sheet
-    sheet.getRange(rowNumber, 20).setValue(pdfUrl); // Column T: GeneratedPDF_URL
+    sheet.getRange(rowNumber, 19).setValue(pdfUrl); // Column S: GeneratedPDF_URL
 
     // Delete the temporary doc
     docCopy.setTrashed(true);
@@ -775,7 +779,7 @@ function fixAllPDFSharing() {
   let skipped = 0;
 
   for (let i = 1; i < data.length; i++) {
-    const pdfUrl = data[i][19]; // Column T: GeneratedPDF_URL
+    const pdfUrl = data[i][18]; // Column S: GeneratedPDF_URL
     const status = data[i][13]; // Column N: Status
 
     // Only fix 'Approved' certificates that have a URL
@@ -783,7 +787,7 @@ function fixAllPDFSharing() {
       // Extract file ID from URL
       // Handles both '/view' and '/uc' formats
       const match = pdfUrl.match(/id=([^\/&]+)|file\/d\/([^\/&]+)/);
-      
+
       if (match && (match[1] || match[2])) {
         const fileId = match[1] || match[2];
         const result = fixPDFSharing(fileId);
@@ -792,7 +796,7 @@ function fixAllPDFSharing() {
           // **Also update the URL to the new format**
           const newPdfUrl = 'https://drive.google.com/uc?export=view&id=' + fileId;
           if (pdfUrl !== newPdfUrl) {
-            sheet.getRange(i + 1, 20).setValue(newPdfUrl);
+            sheet.getRange(i + 1, 19).setValue(newPdfUrl);
           }
           fixed++;
           console.log('Fixed: ' + fileId);
@@ -833,7 +837,7 @@ function initializeDatabase() {
     'Timestamp', 'RegistrationNo', 'DisplayName', 'LastName', 'FirstName',
     'MiddleInitial', 'Suffix', 'Position', 'Office', 'StartDate', 'EndDate',
     'InclusiveDates', 'Purpose', 'Status', 'SubmittedBy', 'ApprovedBy',
-    'IssueDate', 'QRCodeLink', 'VerificationURL', 'GeneratedPDF_URL'
+    'IssueDate', 'VerificationURL', 'GeneratedPDF_URL'
   ];
   requestsSheet.getRange(1, 1, 1, requestsHeaders.length).setValues([requestsHeaders]);
   requestsSheet.getRange(1, 1, 1, requestsHeaders.length).setFontWeight('bold');

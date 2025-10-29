@@ -158,7 +158,7 @@
           <div class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
             <p class="text-sm text-gray-700">
               <strong>Registration No:</strong> <?= regNo ?><br>
-              This certificate may not exist or the QR code may be invalid.
+              This certificate may not exist or the registration number may be invalid.
             </s'p>
           </div>
           

@@ -96,94 +96,114 @@ function getRequestByRegNo(regNo) {
  * Gets dashboard statistics
  */
 function getDashboardStats() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
-  const data = sheet.getDataRange().getValues();
-  
-  let totalPending = 0;
-  let totalApproved = 0;
-  let totalRejected = 0;
-  const officeCounts = {};
-  
-  for (let i = 1; i < data.length; i++) {
-    const status = data[i][13]; // Column N: Status
-    const office = data[i][8];  // Column I: Office
-    
-    if (status === 'Pending') totalPending++;
-    if (status === 'Approved') totalApproved++;
-    if (status === 'Rejected') totalRejected++;
-    
-    if (office) {
-      officeCounts[office] = (officeCounts[office] || 0) + 1;
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
+    const data = sheet.getDataRange().getValues();
+
+    let totalPending = 0;
+    let totalApproved = 0;
+    let totalRejected = 0;
+    const officeCounts = {};
+
+    for (let i = 1; i < data.length; i++) {
+      const status = data[i][13]; // Column N: Status
+      const office = data[i][8];  // Column I: Office
+
+      if (status === 'Pending') totalPending++;
+      if (status === 'Approved') totalApproved++;
+      if (status === 'Rejected') totalRejected++;
+
+      if (office) {
+        officeCounts[office] = (officeCounts[office] || 0) + 1;
+      }
     }
+
+    // Get top 5 offices
+    const topOffices = Object.entries(officeCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([office, count]) => ({ office, count }));
+
+    return {
+      totalPending,
+      totalApproved,
+      totalRejected,
+      topOffices
+    };
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    return {
+      totalPending: 0,
+      totalApproved: 0,
+      totalRejected: 0,
+      topOffices: []
+    };
   }
-  
-  // Get top 5 offices
-  const topOffices = Object.entries(officeCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([office, count]) => ({ office, count }));
-  
-  return {
-    totalPending,
-    totalApproved,
-    totalRejected,
-    topOffices
-  };
 }
 
 /**
  * Gets all pending requests
  */
 function getPendingRequests() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
-  const data = sheet.getDataRange().getValues();
-  const requests = [];
-  
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][13] === 'Pending') { // Column N: Status
-      requests.push({
-        rowNumber: i + 1,
-        registrationNo: data[i][1],
-        displayName: data[i][2],
-        position: data[i][7],
-        office: data[i][8],
-        inclusiveDates: data[i][11],
-        purpose: data[i][12],
-        submittedBy: data[i][14],
-        timestamp: data[i][0]
-      });
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
+    const data = sheet.getDataRange().getValues();
+    const requests = [];
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][13] === 'Pending') { // Column N: Status
+        requests.push({
+          rowNumber: i + 1,
+          registrationNo: data[i][1],
+          displayName: data[i][2],
+          position: data[i][7],
+          office: data[i][8],
+          inclusiveDates: data[i][11],
+          purpose: data[i][12],
+          submittedBy: data[i][14],
+          timestamp: data[i][0]
+        });
+      }
     }
+
+    return requests.reverse(); // Show newest first
+  } catch (error) {
+    console.error('Error fetching pending requests:', error);
+    return [];
   }
-  
-  return requests.reverse(); // Show newest first
 }
 
 /**
  * Gets approved requests (most recent 20)
  */
 function getApprovedRequests() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
-  const data = sheet.getDataRange().getValues();
-  const requests = [];
-  
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][13] === 'Approved') { // Column N: Status
-      requests.push({
-        rowNumber: i + 1,
-        registrationNo: data[i][1],
-        displayName: data[i][2],
-        position: data[i][7],
-        office: data[i][8],
-        inclusiveDates: data[i][11],
-        purpose: data[i][12],
-        approvedBy: data[i][15],
-        issueDate: data[i][16],
-        pdfUrl: data[i][19]
-      });
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
+    const data = sheet.getDataRange().getValues();
+    const requests = [];
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][13] === 'Approved') { // Column N: Status
+        requests.push({
+          rowNumber: i + 1,
+          registrationNo: data[i][1],
+          displayName: data[i][2],
+          position: data[i][7],
+          office: data[i][8],
+          inclusiveDates: data[i][11],
+          purpose: data[i][12],
+          approvedBy: data[i][15],
+          issueDate: data[i][16],
+          pdfUrl: data[i][19]
+        });
+      }
     }
+
+    return requests.reverse().slice(0, 20); // Show 20 most recent
+  } catch (error) {
+    console.error('Error fetching approved requests:', error);
+    return [];
   }
-  
-  return requests.reverse().slice(0, 20); // Show 20 most recent
 }
 
 /**

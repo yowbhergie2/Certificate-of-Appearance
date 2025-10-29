@@ -1,0 +1,254 @@
+
+/**
+ * CA REQUEST PORTAL - Code.gs
+ * This is the public-facing spreadsheet accessible to all employees.
+ * It only provides a menu to launch the request form modal.
+ * All data is saved to the private RMS CA Database.
+ */
+
+// Configuration - UPDATE THIS WITH YOUR RMS DATABASE SPREADSHEET ID
+const RMS_DATABASE_ID = '1M-qwsQZri0cMB5NNtq4AN960nScexBq72AfsDw0yXKg';
+const ADMIN_EMAIL = 'rms.dpwhro2@gmail.com'; // Update with actual admin email
+
+/**
+ * Creates custom menu when spreadsheet opens
+ */
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('📋 Certificate of Appearance')
+    .addItem('Request Certificate', 'showRequestModal')
+    .addToUi();
+}
+
+/**
+ * Shows the request form modal
+ */
+function showRequestModal() {
+  const html = HtmlService.createHtmlOutputFromFile('RequestModal')
+    .setWidth(600)
+    .setHeight(700);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Request Certificate of Appearance');
+}
+
+/**
+ * Gets list of offices from RMS Database
+ */
+function getOffices() {
+  try {
+    const rmsDb = SpreadsheetApp.openById(RMS_DATABASE_ID);
+    const officesSheet = rmsDb.getSheetByName('Offices');
+    
+    if (!officesSheet) {
+      throw new Error('Offices sheet not found in RMS Database');
+    }
+    
+    const data = officesSheet.getRange(2, 1, officesSheet.getLastRow() - 1, 1).getValues();
+    const offices = data.map(row => row[0]).filter(office => office !== '');
+    
+    return offices;
+  } catch (error) {
+    console.error('Error fetching offices:', error);
+    throw new Error('Unable to fetch offices. Please contact the administrator.');
+  }
+}
+
+/**
+ * Processes the submitted request form
+ * @param {Object} formData - The form data from the modal
+ * @returns {Object} Success or error response
+ */
+function processRequestForm(formData) {
+  try {
+    // Connect to RMS Database
+    const rmsDb = SpreadsheetApp.openById(RMS_DATABASE_ID);
+    const requestsSheet = rmsDb.getSheetByName('Requests');
+    
+    if (!requestsSheet) {
+      throw new Error('Requests sheet not found in RMS Database');
+    }
+    
+    // Format the name into DisplayName
+    const displayName = formatDisplayName(formData);
+    
+    // Format dates into InclusiveDates
+    const inclusiveDates = formatInclusiveDates(formData.startDate, formData.endDate);
+    
+    // Check for duplicates
+    if (isDuplicate(requestsSheet, displayName, formData.position, formData.office, inclusiveDates)) {
+      return {
+        success: false,
+        message: 'A similar request already exists. Please check your pending requests or contact the administrator.'
+      };
+    }
+    
+    // Generate Registration Number
+    const registrationNo = generateRegistrationNo(requestsSheet);
+    
+    // Prepare the row data
+    const timestamp = new Date();
+    const submittedBy = Session.getActiveUser().getEmail();
+    
+    const rowData = [
+      timestamp,                    // A: Timestamp
+      registrationNo,               // B: RegistrationNo
+      displayName,                  // C: DisplayName
+      formData.lastName,            // D: LastName
+      formData.firstName,           // E: FirstName
+      formData.middleInitial || '', // F: MiddleInitial
+      formData.suffix || '',        // G: Suffix
+      formData.position,            // H: Position
+      formData.office,              // I: Office
+      formData.startDate,           // J: StartDate
+      formData.endDate,             // K: EndDate
+      inclusiveDates,               // L: InclusiveDates
+      formData.purpose,             // M: Purpose
+      'Pending',                    // N: Status
+      submittedBy,                  // O: SubmittedBy
+      '',                           // P: ApprovedBy
+      '',                           // Q: IssueDate
+      '',                           // R: QRCodeLink
+      '',                           // S: VerificationURL
+      ''                            // T: GeneratedPDF_URL
+    ];
+    
+    // Append to Requests sheet
+    requestsSheet.appendRow(rowData);
+    
+    // Send notification email to admin
+    sendAdminNotification(displayName, formData.office, registrationNo);
+    
+    return {
+      success: true,
+      message: 'Your Certificate of Appearance request has been submitted successfully! Registration No: ' + registrationNo
+    };
+    
+  } catch (error) {
+    console.error('Error processing request:', error);
+    return {
+      success: false,
+      message: 'An error occurred while processing your request. Please try again or contact the administrator.'
+    };
+  }
+}
+
+/**
+ * Formats the name into DisplayName format
+ * Example: "Juan A. Dela Cruz, Jr."
+ */
+function formatDisplayName(formData) {
+  let displayName = formData.lastName;
+  
+  if (formData.firstName) {
+    displayName = formData.firstName + ' ';
+    if (formData.middleInitial) {
+      displayName += formData.middleInitial + '. ';
+    }
+    displayName += formData.lastName;
+  }
+  
+  if (formData.suffix) {
+    displayName += ', ' + formData.suffix;
+  }
+  
+  return displayName;
+}
+
+/**
+ * Formats dates into InclusiveDates string
+ * Examples: "Oct 29-31, 2025" or "Oct 29, 2025"
+ */
+function formatInclusiveDates(startDate, endDate) {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  
+  const startMonth = months[start.getMonth()];
+  const startDay = start.getDate();
+  const endDay = end.getDate();
+  const year = start.getFullYear();
+  
+  if (startDate === endDate) {
+    // Single day
+    return `${startMonth} ${startDay}, ${year}`;
+  } else if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
+    // Same month
+    return `${startMonth} ${startDay}-${endDay}, ${year}`;
+  } else {
+    // Different months
+    const endMonth = months[end.getMonth()];
+    const endYear = end.getFullYear();
+    return `${startMonth} ${startDay}, ${year} - ${endMonth} ${endDay}, ${endYear}`;
+  }
+}
+
+/**
+ * Checks for duplicate requests
+ */
+function isDuplicate(sheet, displayName, position, office, inclusiveDates) {
+  const data = sheet.getDataRange().getValues();
+  
+  // Skip header row
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    // Check columns: DisplayName (C=2), Position (H=7), Office (I=8), InclusiveDates (L=11), Status (N=13)
+    if (row[2] === displayName && 
+        row[7] === position && 
+        row[8] === office && 
+        row[11] === inclusiveDates &&
+        row[13] === 'Pending') {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Generates a unique Registration Number
+ * Format: B2025-10-29-0001
+ */
+function generateRegistrationNo(sheet) {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  
+  const prefix = `B${year}-${month}-${day}`;
+  
+  // Get all registration numbers for today
+  const data = sheet.getDataRange().getValues();
+  let maxSequence = 0;
+  
+  for (let i = 1; i < data.length; i++) {
+    const regNo = data[i][1]; // Column B
+    if (regNo && regNo.startsWith(prefix)) {
+      const sequence = parseInt(regNo.split('-')[3]);
+      if (sequence > maxSequence) {
+        maxSequence = sequence;
+      }
+    }
+  }
+  
+  const newSequence = String(maxSequence + 1).padStart(4, '0');
+  return `${prefix}-${newSequence}`;
+}
+
+/**
+ * Sends email notification to admin
+ */
+function sendAdminNotification(displayName, office, registrationNo) {
+  try {
+    const subject = `New CA Request: ${registrationNo}`;
+    const body = `A new Certificate of Appearance request has been submitted.\n\n` +
+                 `Registration No: ${registrationNo}\n` +
+                 `Name: ${displayName}\n` +
+                 `Office: ${office}\n\n` +
+                 `Please review this request in the RMS Admin Panel.`;
+    
+    MailApp.sendEmail(ADMIN_EMAIL, subject, body);
+  } catch (error) {
+    console.error('Error sending admin notification:', error);
+    // Don't throw error - notification failure shouldn't stop the request
+  }
+}

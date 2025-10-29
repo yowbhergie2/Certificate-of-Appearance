@@ -102,7 +102,8 @@ function getRequestByRegNo(regNo) {
         purpose: data[i][12],
         status: data[i][13],
         issueDate: data[i][16] ? new Date(data[i][16]).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A',
-        approvedBy: data[i][15] || 'N/A'
+        approvedBy: data[i][15] || 'N/A',
+        pdfUrl: data[i][19] || null // **FIX:** Include PDF URL (Column T)
       };
     }
   }
@@ -468,9 +469,11 @@ function generateCertificate(regNo) {
     
     // **FIX:** Set sharing permissions for QR code to work
     pdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    
-    const pdfUrl = pdfFile.getUrl();
-    
+
+    // **FIX:** Use a direct view/download URL format that works publicly
+    const fileId = pdfFile.getId();
+    const pdfUrl = 'https://drive.google.com/file/d/' + fileId + '/view?usp=sharing';
+
     // Save PDF URL to sheet
     sheet.getRange(rowNumber, 20).setValue(pdfUrl); // Column T: GeneratedPDF_URL
     

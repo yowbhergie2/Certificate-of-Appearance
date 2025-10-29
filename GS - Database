@@ -173,7 +173,7 @@ function getPendingRequests() {
 
     // Check if sheet exists
     if (!sheet) {
-      console.error('Requests sheet not found');
+      Logger.log('ERROR: Requests sheet not found');
       return [];
     }
 
@@ -181,7 +181,7 @@ function getPendingRequests() {
 
     // Check if data exists and has more than just headers
     if (!data || data.length <= 1) {
-      console.log('No data in Requests sheet');
+      Logger.log('No data in Requests sheet');
       return [];
     }
 
@@ -189,23 +189,34 @@ function getPendingRequests() {
 
     for (let i = 1; i < data.length; i++) {
       if (data[i][13] === 'Pending') { // Column N: Status
+        // Convert timestamp to string to avoid serialization issues
+        const timestamp = data[i][0];
+        const timestampStr = timestamp ?
+          (timestamp instanceof Date ? timestamp.toISOString() : String(timestamp)) : '';
+
+        // Convert inclusiveDates to string
+        const inclusiveDates = data[i][11];
+        const inclusiveDatesStr = inclusiveDates ?
+          (inclusiveDates instanceof Date ? Utilities.formatDate(inclusiveDates, Session.getScriptTimeZone(), 'MMM dd, yyyy') : String(inclusiveDates)) : '';
+
         requests.push({
           rowNumber: i + 1,
-          registrationNo: data[i][1],
-          displayName: data[i][2],
-          position: data[i][7],
-          office: data[i][8],
-          inclusiveDates: data[i][11],
-          purpose: data[i][12],
-          submittedBy: data[i][14],
-          timestamp: data[i][0]
+          registrationNo: String(data[i][1] || ''),
+          displayName: String(data[i][2] || ''),
+          position: String(data[i][7] || ''),
+          office: String(data[i][8] || ''),
+          inclusiveDates: inclusiveDatesStr,
+          purpose: String(data[i][12] || ''),
+          submittedBy: String(data[i][14] || ''),
+          timestamp: timestampStr
         });
       }
     }
 
+    Logger.log('Returning ' + requests.length + ' pending requests');
     return requests.reverse(); // Show newest first
   } catch (error) {
-    console.error('Error fetching pending requests:', error);
+    Logger.log('Error fetching pending requests: ' + error.toString());
     return [];
   }
 }
@@ -219,7 +230,7 @@ function getApprovedRequests() {
 
     // Check if sheet exists
     if (!sheet) {
-      console.error('Requests sheet not found');
+      Logger.log('ERROR: Requests sheet not found');
       return [];
     }
 
@@ -227,7 +238,7 @@ function getApprovedRequests() {
 
     // Check if data exists and has more than just headers
     if (!data || data.length <= 1) {
-      console.log('No data in Requests sheet');
+      Logger.log('No data in Requests sheet');
       return [];
     }
 
@@ -235,24 +246,34 @@ function getApprovedRequests() {
 
     for (let i = 1; i < data.length; i++) {
       if (data[i][13] === 'Approved') { // Column N: Status
+        // Convert dates to strings to avoid serialization issues
+        const inclusiveDates = data[i][11];
+        const inclusiveDatesStr = inclusiveDates ?
+          (inclusiveDates instanceof Date ? Utilities.formatDate(inclusiveDates, Session.getScriptTimeZone(), 'MMM dd, yyyy') : String(inclusiveDates)) : '';
+
+        const issueDate = data[i][16];
+        const issueDateStr = issueDate ?
+          (issueDate instanceof Date ? Utilities.formatDate(issueDate, Session.getScriptTimeZone(), 'MMM dd, yyyy') : String(issueDate)) : '';
+
         requests.push({
           rowNumber: i + 1,
-          registrationNo: data[i][1],
-          displayName: data[i][2],
-          position: data[i][7],
-          office: data[i][8],
-          inclusiveDates: data[i][11],
-          purpose: data[i][12],
-          approvedBy: data[i][15],
-          issueDate: data[i][16],
-          pdfUrl: data[i][19]
+          registrationNo: String(data[i][1] || ''),
+          displayName: String(data[i][2] || ''),
+          position: String(data[i][7] || ''),
+          office: String(data[i][8] || ''),
+          inclusiveDates: inclusiveDatesStr,
+          purpose: String(data[i][12] || ''),
+          approvedBy: String(data[i][15] || ''),
+          issueDate: issueDateStr,
+          pdfUrl: String(data[i][19] || '')
         });
       }
     }
 
+    Logger.log('Returning ' + requests.length + ' approved requests');
     return requests.reverse().slice(0, 20); // Show 20 most recent
   } catch (error) {
-    console.error('Error fetching approved requests:', error);
+    Logger.log('Error fetching approved requests: ' + error.toString());
     return [];
   }
 }

@@ -261,6 +261,9 @@
       google.script.run
         .withSuccessHandler(function(requests) {
           try {
+            // DEBUG: Log what the server is returning
+            console.log('Server response for getPendingRequests:', requests);
+            
             const container = document.getElementById('pendingRequests');
             container.innerHTML = '';
             

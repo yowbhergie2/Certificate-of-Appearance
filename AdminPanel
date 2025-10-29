@@ -162,7 +162,61 @@
       <p id="loadingText" class="text-gray-700 font-medium">Loading...</p>
     </div>
   </div>
-  
+
+  <!-- Edit Request Modal -->
+  <div id="editModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-lg shadow-xl max-w-2xl w-full mx-4">
+      <h3 class="text-xl font-bold text-gray-800 mb-4">Edit Request</h3>
+      <form id="editForm" onsubmit="handleEditSubmit(event)">
+        <input type="hidden" id="editRowNumber">
+        <input type="hidden" id="editRegNo">
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
+            <input type="text" id="editDisplayName" required
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Position</label>
+            <input type="text" id="editPosition" required
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Office</label>
+            <input type="text" id="editOffice" required
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Inclusive Dates</label>
+            <input type="text" id="editInclusiveDates" required
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Purpose</label>
+            <textarea id="editPurpose" required rows="3"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+          </div>
+        </div>
+
+        <div class="flex justify-end space-x-3 mt-6">
+          <button type="button" onclick="closeEditModal()"
+                  class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition">
+            Cancel
+          </button>
+          <button type="submit"
+                  class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+            Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     let currentTab = 'dashboard';
     
@@ -322,6 +376,10 @@
       let buttons = '';
       if (type === 'pending') {
         buttons = `
+          <button onclick="editRequest(${req.rowNumber}, '${req.registrationNo}', '${req.displayName.replace(/'/g, "\\'")}', '${req.position.replace(/'/g, "\\'")}', '${req.office.replace(/'/g, "\\'")}', '${req.inclusiveDates.replace(/'/g, "\\'")}', '${req.purpose.replace(/'/g, "\\'")}')"
+                  class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition mr-2">
+            Edit
+          </button>
           <button onclick="approveRequest(${req.rowNumber}, '${req.registrationNo}')"
                   class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition mr-2">
             Approve
@@ -438,27 +496,72 @@
     
     function handleSignatoryUpdate(event) {
       event.preventDefault();
-      
+
       const name = document.getElementById('signatoryName').value;
       const position = document.getElementById('signatoryPosition').value;
-      
+
       showLoading('Updating signatory...');
       google.script.run
         .withSuccessHandler(function(response) {
           hideLoading();
           const messageDiv = document.getElementById('settingsMessage');
-          messageDiv.className = response.success 
-            ? 'p-3 bg-green-100 text-green-700 rounded' 
+          messageDiv.className = response.success
+            ? 'p-3 bg-green-100 text-green-700 rounded'
             : 'p-3 bg-red-100 text-red-700 rounded';
           messageDiv.textContent = response.message;
           messageDiv.classList.remove('hidden');
-          
+
           setTimeout(() => {
             messageDiv.classList.add('hidden');
           }, 3000);
         })
         .withFailureHandler(handleAdminError) // Added failure handler
         .updateSignatory(name, position);
+    }
+
+    function editRequest(rowNumber, regNo, displayName, position, office, inclusiveDates, purpose) {
+      // Populate the modal with current values
+      document.getElementById('editRowNumber').value = rowNumber;
+      document.getElementById('editRegNo').value = regNo;
+      document.getElementById('editDisplayName').value = displayName;
+      document.getElementById('editPosition').value = position;
+      document.getElementById('editOffice').value = office;
+      document.getElementById('editInclusiveDates').value = inclusiveDates;
+      document.getElementById('editPurpose').value = purpose;
+
+      // Show the modal
+      document.getElementById('editModal').classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').classList.add('hidden');
+    }
+
+    function handleEditSubmit(event) {
+      event.preventDefault();
+
+      const rowNumber = parseInt(document.getElementById('editRowNumber').value);
+      const displayName = document.getElementById('editDisplayName').value;
+      const position = document.getElementById('editPosition').value;
+      const office = document.getElementById('editOffice').value;
+      const inclusiveDates = document.getElementById('editInclusiveDates').value;
+      const purpose = document.getElementById('editPurpose').value;
+
+      closeEditModal();
+      showLoading('Updating request...');
+
+      google.script.run
+        .withSuccessHandler(function(response) {
+          hideLoading();
+          if (response.success) {
+            alert(response.message);
+            loadPendingRequests();
+          } else {
+            alert(response.message);
+          }
+        })
+        .withFailureHandler(handleAdminError)
+        .updateRequest(rowNumber, displayName, position, office, inclusiveDates, purpose);
     }
   </script>
 </body>

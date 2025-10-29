@@ -258,6 +258,40 @@ function getApprovedRequests() {
 }
 
 /**
+ * Updates a pending request
+ */
+function updateRequest(rowNumber, displayName, position, office, inclusiveDates, purpose) {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Requests');
+
+    if (!sheet) {
+      return {
+        success: false,
+        message: 'Requests sheet not found'
+      };
+    }
+
+    // Update the row with new values
+    sheet.getRange(rowNumber, 3).setValue(displayName);   // Column C: DisplayName
+    sheet.getRange(rowNumber, 8).setValue(position);      // Column H: Position
+    sheet.getRange(rowNumber, 9).setValue(office);        // Column I: Office
+    sheet.getRange(rowNumber, 12).setValue(inclusiveDates); // Column L: InclusiveDates
+    sheet.getRange(rowNumber, 13).setValue(purpose);      // Column M: Purpose
+
+    return {
+      success: true,
+      message: 'Request updated successfully!'
+    };
+  } catch (error) {
+    Logger.log('Error updating request: ' + error);
+    return {
+      success: false,
+      message: 'Error: ' + error.toString()
+    };
+  }
+}
+
+/**
  * Approves a request
  */
 function approveRequest(rowNumber, regNo) {

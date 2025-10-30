@@ -939,5 +939,3 @@ function initializeDatabase() {
 
   SpreadsheetApp.getUi().alert('Database initialized successfully!');
 }
-
-
